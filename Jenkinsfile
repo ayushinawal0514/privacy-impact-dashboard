@@ -2,11 +2,13 @@ pipeline {
     agent any
 
     environment {
-        NODE_HOME = "C:\\nvm4w\\nodejs"
-        PATH = "${NODE_HOME};${env.PATH}"
-        NEXTAUTH_URL = "http://localhost:3000"
-        NEXTAUTH_SECRET = "mysecret123"
-    }
+    NODE_HOME = "C:\\nvm4w\\nodejs"
+    PATH = "${NODE_HOME};${env.PATH}"
+
+    NEXTAUTH_URL = "http://localhost:3000"
+    NEXTAUTH_SECRET = "testsecret"
+    MONGODB_URI = "mongodb://localhost:27017/test"
+}
 
     stages {
 
