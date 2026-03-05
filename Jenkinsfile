@@ -10,19 +10,19 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                bat 'npm install'
+                 bat 'C:\\nvm4w\\nodejs\\npm.cmd install'
             }
         }
 
         stage('Build Application') {
             steps {
-                bat 'npm run build'
+                bat 'C:\\nvm4w\\nodejs\\npm.cmd run build'
             }
         }
 
         stage('Run Application') {
             steps {
-                bat 'npm start'
+                bat 'C:\\nvm4w\\nodejs\\npm.cmd start'
             }
         }
     }
