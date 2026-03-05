@@ -32,7 +32,6 @@ export default function DashboardLayout({
           sidebarOpen ? "w-64" : "w-0"
         } transition-all duration-300 bg-slate-900 text-white flex flex-col overflow-hidden`}
       >
-        {/* Logo Section */}
         <div className="p-6 border-b border-slate-800">
           <h1 className="text-lg font-bold">PIA Framework</h1>
           <p className="text-xs text-slate-400 mt-1">Privacy Impact Assessment</p>
@@ -44,8 +43,6 @@ export default function DashboardLayout({
             <button
               key={section.id}
               onClick={() => {
-                // This would normally navigate to different sections
-                // For now, it's just a button structure for UI demonstration
               }}
               className={`w-full text-left px-4 py-3 rounded-lg transition ${
                 activeSection === section.id
@@ -58,8 +55,6 @@ export default function DashboardLayout({
             </button>
           ))}
         </nav>
-
-        {/* Footer */}
         <div className="p-4 border-t border-slate-800 space-y-2">
           <button
             onClick={() => signOut({ callbackUrl: "/" })}
@@ -69,21 +64,15 @@ export default function DashboardLayout({
           </button>
         </div>
       </aside>
-
-      {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Navbar */}
         <header className="bg-white border-b border-slate-200 shadow-sm">
           <div className="px-6 py-4 flex justify-between items-center">
-            {/* Menu Toggle */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="text-slate-600 hover:text-slate-900 transition"
             >
               {sidebarOpen ? "☰" : "☰"}
             </button>
-
-            {/* Title */}
             <h2 className="text-xl font-semibold text-slate-900">
               Privacy Impact Assessment Dashboard
             </h2>
@@ -104,8 +93,6 @@ export default function DashboardLayout({
             </div>
           </div>
         </header>
-
-        {/* Scrollable Content Area */}
         <main className="flex-1 overflow-y-auto">
           <div className="p-8">
             {children}

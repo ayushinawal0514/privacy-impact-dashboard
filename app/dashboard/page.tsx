@@ -38,17 +38,13 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout activeSection="overview">
-      {/* Overview Section */}
       <div className="space-y-8">
-        {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Overview</h1>
           <p className="text-slate-600">
             Real-time privacy impact assessment and healthcare data compliance monitoring
           </p>
         </div>
-
-        {/* Metric Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <MetricCard
             title="Total Patient Records"
@@ -83,10 +79,7 @@ export default function Dashboard() {
             bgColor="bg-purple-50"
           />
         </div>
-
-        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Risk Table */}
           <div className="lg:col-span-2">
             <div className="rounded-lg border bg-white shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b bg-slate-50">
@@ -102,8 +95,6 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
-          {/* Right Column - Compliance Status */}
           <div>
             <div className="rounded-lg border bg-white shadow-sm">
               <div className="px-6 py-4 border-b bg-slate-50">
@@ -120,13 +111,9 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-
-        {/* Data Flow Visualization */}
         <div>
           <DataFlowVisualization />
         </div>
-
-        {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <button className="rounded-lg border bg-white p-6 text-left hover:shadow-md hover:border-blue-300 transition">
             <div className="text-2xl mb-2">📋</div>
@@ -150,8 +137,6 @@ export default function Dashboard() {
             </p>
           </button>
         </div>
-
-        {/* Footer Info */}
         <div className="rounded-lg border border-slate-200 bg-blue-50 p-6">
           <p className="text-sm text-slate-700">
             <span className="font-semibold text-blue-900">ℹ️ About this dashboard:</span> This automated PIA framework provides continuous monitoring of healthcare data systems for privacy compliance. All risks are detected using pattern analysis and regulatory standards compliance checks. Detected risks should be reviewed and mitigated according to your organizational security policies.
@@ -161,5 +146,3 @@ export default function Dashboard() {
     </DashboardLayout>
   );
 }
-
-// dashboard page

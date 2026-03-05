@@ -8,7 +8,6 @@ export default function DataFlowVisualization() {
       </h3>
 
       <div className="flex flex-col lg:flex-row items-center justify-between gap-4 lg:gap-0">
-        {/* Patient Data */}
         <div className="flex flex-col items-center">
           <div className="w-24 h-24 rounded-lg bg-blue-100 border-2 border-blue-400 flex items-center justify-center mb-4">
             <div className="text-center">
@@ -18,8 +17,6 @@ export default function DataFlowVisualization() {
           </div>
           <p className="text-xs text-slate-600 text-center">Data Source</p>
         </div>
-
-        {/* Arrow 1 */}
         <div className="hidden lg:flex items-center justify-center w-12">
           <div className="w-full h-1 bg-slate-300" />
           <div className="absolute w-3 h-3 bg-slate-400 transform rotate-45 ml-2" />
@@ -27,8 +24,6 @@ export default function DataFlowVisualization() {
         <div className="lg:hidden w-1 h-8 bg-slate-300 relative">
           <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-slate-400 rotate-45 translate-y-1" />
         </div>
-
-        {/* Cloud Storage */}
         <div className="flex flex-col items-center">
           <div className="w-24 h-24 rounded-lg bg-green-100 border-2 border-green-400 flex items-center justify-center mb-4">
             <div className="text-center">
@@ -39,8 +34,6 @@ export default function DataFlowVisualization() {
           </div>
           <p className="text-xs text-slate-600 text-center">Data Lake</p>
         </div>
-
-        {/* Arrow 2 */}
         <div className="hidden lg:flex items-center justify-center w-12">
           <div className="w-full h-1 bg-slate-300" />
           <div className="absolute w-3 h-3 bg-slate-400 transform rotate-45 ml-2" />
@@ -48,8 +41,6 @@ export default function DataFlowVisualization() {
         <div className="lg:hidden w-1 h-8 bg-slate-300 relative">
           <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-slate-400 rotate-45 translate-y-1" />
         </div>
-
-        {/* ML Risk Analyzer */}
         <div className="flex flex-col items-center">
           <div className="w-24 h-24 rounded-lg bg-purple-100 border-2 border-purple-400 flex items-center justify-center mb-4">
             <div className="text-center">
@@ -60,8 +51,6 @@ export default function DataFlowVisualization() {
           </div>
           <p className="text-xs text-slate-600 text-center">Analysis Engine</p>
         </div>
-
-        {/* Arrow 3 */}
         <div className="hidden lg:flex items-center justify-center w-12">
           <div className="w-full h-1 bg-slate-300" />
           <div className="absolute w-3 h-3 bg-slate-400 transform rotate-45 ml-2" />
@@ -69,8 +58,6 @@ export default function DataFlowVisualization() {
         <div className="lg:hidden w-1 h-8 bg-slate-300 relative">
           <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-slate-400 rotate-45 translate-y-1" />
         </div>
-
-        {/* Compliance Engine */}
         <div className="flex flex-col items-center">
           <div className="w-24 h-24 rounded-lg bg-orange-100 border-2 border-orange-400 flex items-center justify-center mb-4">
             <div className="text-center">
