@@ -4,7 +4,16 @@ import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password } = await req.json();
+    const body = await req.json().catch(() => null);
+
+    if (!body) {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 }
+      );
+    }
+
+    const { name, email, password } = body;
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -16,9 +25,9 @@ export async function POST(req: Request) {
     const client = await clientPromise;
     const db = client.db();
 
-    const existingUser = await db
-      .collection("users")
-      .findOne({ email });
+    const existingUser = await db.collection("users").findOne({
+      email: email,
+    });
 
     if (existingUser) {
       return NextResponse.json(
@@ -30,8 +39,8 @@ export async function POST(req: Request) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await db.collection("users").insertOne({
-      name,
-      email,
+      name: name,
+      email: email,
       password: hashedPassword,
       role: "User",
       provider: "credentials",
@@ -44,7 +53,7 @@ export async function POST(req: Request) {
     );
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || "Server error" },
+      { error: error?.message || "Server error" },
       { status: 500 }
     );
   }
