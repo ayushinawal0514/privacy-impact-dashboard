@@ -28,13 +28,17 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                bat 'npm install'
+                dir('privacy-impact-dashboard') {
+                    bat 'npm install'
+                }
             }
         }
 
         stage('Build Application') {
             steps {
-                bat 'npm run build'
+                dir('privacy-impact-dashboard') {
+                    bat 'npm run build'
+                }
             }
         }
 
