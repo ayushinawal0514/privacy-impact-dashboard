@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     stages {
-
         stage('Clone Repository') {
             steps {
                 git 'https://github.com/ayushinawal0514/privacy-impact-dashboard.git'
@@ -26,6 +25,5 @@ pipeline {
                 bat 'npm start'
             }
         }
-
     }
 }
