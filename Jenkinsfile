@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     environment {
-        PATH = "C:\\nvm4w\\nodejs;${env.PATH}"
+        NEXTAUTH_URL = "http://localhost:3000"
+        NEXTAUTH_SECRET = "mysecret123"
     }
 
     stages {
@@ -15,7 +16,8 @@ pipeline {
 
         stage('Clone Repository') {
             steps {
-                git branch: 'staging', url: 'https://github.com/ayushinawal0514/privacy-impact-dashboard.git'
+                git branch: 'staging',
+                url: 'https://github.com/ayushinawal0514/privacy-impact-dashboard.git'
             }
         }
 
@@ -44,5 +46,14 @@ pipeline {
             }
         }
 
+    }
+
+    post {
+        success {
+            echo 'Pipeline executed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Check logs.'
+        }
     }
 }
