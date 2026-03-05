@@ -19,6 +19,12 @@ pipeline {
             }
         }
 
+        stage('Checkout Code') {
+            steps {
+                checkout scm
+            }
+        }
+
         stage('Check Node Version') {
             steps {
                 bat 'node -v'
@@ -26,19 +32,21 @@ pipeline {
             }
         }
 
+        stage('Check Files') {
+            steps {
+                bat 'dir'
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
-                dir('privacy-impact-dashboard') {
-                    bat 'npm install'
-                }
+                bat 'npm install'
             }
         }
 
         stage('Build Application') {
             steps {
-                dir('privacy-impact-dashboard') {
-                    bat 'npm run build'
-                }
+                bat 'npm run build'
             }
         }
 
