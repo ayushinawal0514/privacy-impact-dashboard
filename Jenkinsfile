@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git 'https://github.com/ayushinawal0514/privacy-impact-dashboard.git'
+                git branch: 'staging', url: 'https://github.com/ayushinawal0514/privacy-impact-dashboard.git'
             }
         }
 
