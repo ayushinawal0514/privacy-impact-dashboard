@@ -46,7 +46,7 @@ pipeline {
 
         stage('Run Application') {
             steps {
-                bat 'npm start'
+                bat 'start /B npm start'
             }
         }
     }
