@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.1.0
+    container_name: healthcare-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: healthcare-compliance
+    volumes:
+      - mongodb_data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js
+    networks:
+      - healthcare-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: healthcare-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - healthcare-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: healthcare-backend
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/healthcare-compliance?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      ML_SERVICE_URL: http://ml-service:5000
+      LOG_LEVEL: info
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - ./src:/app/src
+      - ./logs:/app/logs
+    networks:
+      - healthcare-network
+
+  ml-service:
+    build:
+      context: ../ml
+      dockerfile: Dockerfile
+    container_name: healthcare-ml
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_ENV: production
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/healthcare-compliance?authSource=admin
+    depends_on:
+      - mongodb
+    volumes:
+      - ../ml/app.py:/app/app.py
+      - ../ml/models:/app/models
+    networks:
+      - healthcare-network
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  healthcare-network:
+    driver: bridge

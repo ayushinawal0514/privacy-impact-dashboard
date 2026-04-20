@@ -1,0 +1,166 @@
+version: '3.8'
+
+services:
+  # MongoDB - Database
+  mongodb:
+    image: mongo:7.1.0
+    container_name: healthcare-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: healthcare-compliance
+    volumes:
+      - mongodb_data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js
+    networks:
+      - healthcare-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis - Caching & Sessions
+  redis:
+    image: redis:7-alpine
+    container_name: healthcare-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - healthcare-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API Server
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: healthcare-backend
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/healthcare-compliance?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      FRONTEND_URL: http://localhost:3000
+      ML_SERVICE_URL: http://ml-service:5000
+      LOG_LEVEL: info
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/logs:/app/logs
+    networks:
+      - healthcare-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Web App
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: healthcare-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api
+      NEXT_PUBLIC_ML_URL: http://localhost:5000
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-your-nextauth-secret-change-in-production}
+      NEXTAUTH_URL: http://localhost:3000
+    depends_on:
+      - backend
+    networks:
+      - healthcare-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ML Service - Anomaly Detection
+  ml-service:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile
+    container_name: healthcare-ml
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_ENV: production
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/healthcare-compliance?authSource=admin
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./ml/models:/app/models
+    networks:
+      - healthcare-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Elasticsearch - Log aggregation
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: healthcare-elasticsearch
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - healthcare-network
+    healthcheck:
+      test: curl -s http://localhost:9200 >/dev/null || exit 1
+      interval: 1s
+      timeout: 10s
+      retries: 120
+
+  # Kibana - Log visualization
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: healthcare-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - healthcare-network
+    healthcheck:
+      test: curl -s http://localhost:5601/api/status >/dev/null || exit 1
+      interval: 1s
+      timeout: 10s
+      retries: 120
+
+volumes:
+  mongodb_data:
+  redis_data:
+  elasticsearch_data:
+
+networks:
+  healthcare-network:
+    driver: bridge
