@@ -1,5 +1,910 @@
-[00:00:01.202] Server  LOG     ✓ Ready in 846ms
-[00:00:01.627] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:05.260] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:08.460] Browser WARN    Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
-[00:01:11.291] Server  LOG     User signed in: "zain.khan23@st.niituniversity.in"
+[00:00:20.218] Server  LOG     ✓ Ready in 12.3s
+[00:00:23.276] Server  LOG     ○ Compiling / ...
+[00:00:37.571] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:12.263] Server  LOG     User signed in: "zain.khan23@st.niituniversity.in"
+[00:43:00.529] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:49:31.708] Server  LOG     ✓ Compiled in 131ms
+[00:49:47.147] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:52:02.503] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:52:24.661] Server  LOG     User signed in: "doctor@test.com"
+[00:52:32.747] Server  ERROR   ⨯ ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+
+
+./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+
+[00:52:32.874] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:32.874] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:33.482] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:33.482] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:33.696] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:33.696] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:35.620] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:35.620] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:35.636] Server  ERROR   ⨯ ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+
+
+./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+
+[00:52:36.452] Browser ERROR   uncaughtError: Error: ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+
+[00:52:36.607] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:36.607] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:36.607] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:36.607] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:39.060] Browser ERROR   uncaughtError: Error: ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+
+[00:52:39.205] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:39.205] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:39.205] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:39.205] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:41.434] Browser ERROR   uncaughtError: Error: ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+
+[00:52:41.590] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:41.590] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:41.590] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:52:41.590] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:54:16.035] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>}
+     |        ^^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:54:16.035] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 |       </p>}
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:54:17.032] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:54:17.032] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:54:22.042] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 | }</p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:54:25.034] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:54:25.034] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:54:28.044] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:54:28.044] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"
+     |                                                                     ^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:54:32.041] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:54:32.041] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}}
+     |                                                                     ^^^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:54:34.032] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:91:8
+Parsing ecmascript source code failed
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+  90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+> 91 |       </p>
+     |        ^^^
+  92 |     </div>
+  93 |   );
+  94 | }
+
+Unterminated regexp literal
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:54:34.032] Browser ERROR   ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx:90:69
+Parsing ecmascript source code failed
+  88 |       </div>
+  89 |       <p className="mt-4 text-sm font-medium text-slate-600\">
+> 90 |         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant\"}
+     |                                                                     ^^^^^^^^^^^^^^^^^
+  91 |       </p>
+  92 |     </div>
+  93 |   );
+
+Unterminated string constant
+
+Import traces:
+  Client Component Browser:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component Browser]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Project/capstone_project/frontend/app/components/dashboard/Charts.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Client Component SSR]
+    ./Project/capstone_project/frontend/app/compliance/page.tsx [Server Component]
+[00:54:57.886] Server  LOG     ✓ Compiled in 1370ms
+[00:54:57.987] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:55:01.818] Browser ERROR   Error fetching alerts: {}
+[00:55:01.818] Browser ERROR   Error fetching alerts: {}
+[00:55:33.034] Browser ERROR   Error fetching alerts: {}

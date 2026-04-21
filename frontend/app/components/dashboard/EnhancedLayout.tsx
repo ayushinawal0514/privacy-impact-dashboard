@@ -53,11 +53,11 @@ export function EnhancedDashboardLayout({ activeSection, children, userRole }: L
   );
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex min-h-screen bg-slate-50 overflow-hidden">
       {/* Sidebar */}
       <motion.aside
         initial={false}
-        animate={{ width: isSidebarOpen ? 256 : 64 }}
+        animate={{ width: isSidebarOpen ? 240 : 64 }}
         className="bg-gradient-to-b from-slate-900 to-slate-800 text-white shadow-lg border-r border-slate-700 flex flex-col"
       >
         <div className="p-4 flex items-center justify-between">
@@ -117,8 +117,8 @@ export function EnhancedDashboardLayout({ activeSection, children, userRole }: L
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
-          <h1 className="text-2xl font-bold text-slate-900">
+        <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 truncate">
             {navigationItems.find((i) => activeSection === i.name.toLowerCase())?.name ||
               activeSection}
           </h1>
@@ -146,7 +146,7 @@ export function EnhancedDashboardLayout({ activeSection, children, userRole }: L
 
         {/* Content Area */}
         <main className="flex-1 overflow-auto bg-slate-50">
-          <div className="p-8 max-w-7xl mx-auto">{children}</div>
+          <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
     </div>

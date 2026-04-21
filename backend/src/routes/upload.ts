@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import { ObjectId } from 'mongodb';
 import { AuthRequest } from '../middleware/middlewares';
 import { getDB } from '../config/database';
 import logger from '../config/logger';
@@ -6,8 +7,12 @@ import { privacyAnalyzer } from '../utils/privacyAnalyzer';
 
 const router = Router();
 
-// Upload data for analysis
-router.post('/upload', async (req: AuthRequest, res: Response) => {
+/**
+ * ============================
+ * 🚀 Upload Data + Auto Analyze
+ * ============================
+ */
+router.post('/', async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
     const { fileName, dataType, records, metadata } = req.body;
@@ -26,11 +31,9 @@ router.post('/upload', async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Insert upload record
-    const uploadRecord = {
+    const uploadResult = await db.collection('uploaded_data').insertOne({
       organizationId: req.user.organizationId,
       fileName,
-      fileSize: JSON.stringify(records).length,
       dataType,
       recordCount: records.length,
       uploadedBy: req.userId,
@@ -38,11 +41,8 @@ router.post('/upload', async (req: AuthRequest, res: Response) => {
       status: 'processing',
       metadata: metadata || {},
       createdAt: new Date()
-    };
+    });
 
-    const uploadResult = await db.collection('uploaded_data').insertOne(uploadRecord);
-
-    // Process records - analyze for privacy issues
     const processedRecords = records.map((record: any) => ({
       ...record,
       uploadId: uploadResult.insertedId,
@@ -50,22 +50,76 @@ router.post('/upload', async (req: AuthRequest, res: Response) => {
       processedAt: new Date()
     }));
 
-    // Store processed records
-    if (processedRecords.length > 0) {
-      await db.collection(`records_${dataType}`).insertMany(processedRecords);
-    }
+    await db.collection(`records_${dataType}`).insertMany(processedRecords);
 
-    // Trigger async analysis
-    const analysisInput = {
-      uploadedDataId: uploadResult.insertedId,
-      records: processedRecords,
-      dataType,
-      metadata
-    };
+    setImmediate(async () => {
+      try {
+        const db = getDB();
 
-    // Queue for analysis (in real world, use message queue like RabbitMQ)
-    setImmediate(() => {
-      analyzeUploadedData(uploadResult.insertedId.toString(), analysisInput);
+        const storedRecords = await db.collection(`records_${dataType}`)
+          .find({ uploadId: uploadResult.insertedId })
+          .limit(1000)
+          .toArray();
+
+        const analysisData = prepareAnalysisData(storedRecords);
+        const analysisResult = privacyAnalyzer.analyze(analysisData);
+
+        const result = await db.collection('analysis_results').insertOne({
+          organizationId: req.user.organizationId,
+          uploadedDataId: uploadResult.insertedId,
+          ...analysisResult,
+          createdAt: new Date(),
+          createdBy: req.userId
+        });
+
+        await db.collection('uploaded_data').updateOne(
+          { _id: uploadResult.insertedId },
+          {
+            $set: {
+              status: 'completed',
+              analysisId: result.insertedId
+            }
+          }
+        );
+
+        if (analysisResult.ruleResults?.length) {
+          const risks = analysisResult.ruleResults
+            .filter((r: any) => !r.passed)
+            .map((r: any) => ({
+              organizationId: req.user.organizationId,
+              dataType,
+              severity: r.severity,
+              riskCategory: r.ruleName,
+              description: r.details,
+              detectedAt: new Date(),
+              createdAt: new Date(),
+              status: 'open'
+            }));
+
+          if (risks.length > 0) {
+            await db.collection('privacy_risks').insertMany(risks);
+          }
+        }
+
+        if (analysisResult.anomalies?.length) {
+          const anomalies = analysisResult.anomalies.map((a: any) => ({
+            organizationId: req.user.organizationId,
+            eventType: a.type,
+            severity: a.severity,
+            description: a.description,
+            timestamp: a.timestamp,
+            metadata: a.details,
+            confirmed: false,
+            createdAt: new Date()
+          }));
+
+          await db.collection('anomalies').insertMany(anomalies);
+        }
+
+        logger.info(`Analysis completed for upload ${uploadResult.insertedId.toString()}`);
+      } catch (err) {
+        logger.error('Auto analysis failed:', err);
+      }
     });
 
     return res.status(201).json({
@@ -84,7 +138,11 @@ router.post('/upload', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Get upload history
+/**
+ * ============================
+ * 📊 Get Upload History
+ * ============================
+ */
 router.get('/uploads', async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
@@ -115,14 +173,25 @@ router.get('/uploads', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Get upload details
+/**
+ * ============================
+ * 📄 Get Single Upload Details
+ * ============================
+ */
 router.get('/uploads/:id', async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
     const { id } = req.params;
 
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid upload id'
+      });
+    }
+
     const upload = await db.collection('uploaded_data').findOne({
-      _id: new (require('mongodb').ObjectId)(id),
+      _id: new ObjectId(id),
       organizationId: req.user.organizationId
     });
 
@@ -133,7 +202,10 @@ router.get('/uploads/:id', async (req: AuthRequest, res: Response) => {
       });
     }
 
-    return res.json({ success: true, data: upload });
+    return res.json({
+      success: true,
+      data: upload
+    });
   } catch (error) {
     logger.error('Error fetching upload:', error);
     return res.status(500).json({
@@ -143,115 +215,22 @@ router.get('/uploads/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Analyze uploaded data (trigger analysis)
-router.post('/analyze/:uploadId', async (req: AuthRequest, res: Response) => {
-  try {
-    const db = getDB();
-    const { uploadId } = req.params;
-    const { rules = [], options = {} } = req.body;
-
-    const ObjectId = require('mongodb').ObjectId;
-
-    // Get upload record
-    const upload = await db.collection('uploaded_data').findOne({
-      _id: new ObjectId(uploadId),
-      organizationId: req.user.organizationId
-    });
-
-    if (!upload) {
-      return res.status(404).json({
-        success: false,
-        message: 'Upload not found'
-      });
-    }
-
-    // Get records for analysis
-    const records = await db.collection(`records_${upload.dataType}`)
-      .find({ uploadId: new ObjectId(uploadId) })
-      .limit(options.sampleSize || 1000)
-      .toArray();
-
-    if (records.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No records found for analysis'
-      });
-    }
-
-    // Prepare analysis input
-    const analysisData = prepareAnalysisData(records, upload);
-
-    // Run analysis
-    const analysisResult = privacyAnalyzer.analyze(analysisData);
-
-    // Store analysis result
-    const result = await db.collection('analysis_results').insertOne({
-      organizationId: req.user.organizationId,
-      uploadedDataId: new ObjectId(uploadId),
-      ...analysisResult,
-      createdAt: new Date(),
-      createdBy: req.userId
-    });
-
-    // Update upload status
-    await db.collection('uploaded_data').updateOne(
-      { _id: new ObjectId(uploadId) },
-      { $set: { status: 'completed', analysisId: result.insertedId } }
-    );
-
-    // Create risks from analysis results
-    for (const failedRule of analysisResult.ruleResults.filter(r => !r.passed)) {
-      await db.collection('privacy_risks').insertOne({
-        organizationId: req.user.organizationId,
-        dataType: upload.dataType,
-        severity: failedRule.severity,
-        riskCategory: failedRule.ruleName,
-        description: failedRule.details,
-        affectedUsers: records.length,
-        mitigationPlan: '',
-        detectedAt: new Date(),
-        createdBy: req.userId,
-        createdAt: new Date(),
-        status: 'open'
-      });
-    }
-
-    // Create anomaly risks
-    for (const anomaly of analysisResult.anomalies) {
-      await db.collection('anomalies').insertOne({
-        organizationId: req.user.organizationId,
-        eventType: anomaly.type,
-        severity: anomaly.severity,
-        description: anomaly.description,
-        timestamp: anomaly.timestamp,
-        metadata: anomaly.details,
-        confirmed: false,
-        createdAt: new Date()
-      });
-    }
-
-    return res.json({
-      success: true,
-      message: 'Analysis completed',
-      analysisId: result.insertedId,
-      ...analysisResult
-    });
-  } catch (error) {
-    logger.error('Error analyzing data:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to analyze data'
-    });
-  }
-});
-
-// Get analysis results
+/**
+ * ============================
+ * 📈 Get Analysis Result by analysisId
+ * ============================
+ */
 router.get('/results/:analysisId', async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
     const { analysisId } = req.params;
 
-    const ObjectId = require('mongodb').ObjectId;
+    if (!ObjectId.isValid(analysisId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid analysis id'
+      });
+    }
 
     const result = await db.collection('analysis_results').findOne({
       _id: new ObjectId(analysisId),
@@ -265,7 +244,10 @@ router.get('/results/:analysisId', async (req: AuthRequest, res: Response) => {
       });
     }
 
-    return res.json({ success: true, data: result });
+    return res.json({
+      success: true,
+      data: result
+    });
   } catch (error) {
     logger.error('Error fetching analysis result:', error);
     return res.status(500).json({
@@ -275,98 +257,55 @@ router.get('/results/:analysisId', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Helper function to prepare analysis data
-function prepareAnalysisData(records: any[], upload: any): any {
-  // Group by field patterns to detect sensitive data
+/**
+ * ============================
+ * 🧠 Helper: Prepare Data
+ * ============================
+ */
+function prepareAnalysisData(records: any[]): any {
   const permissions: any[] = [];
   const dataItems: any[] = [];
   const accessLogs: any[] = [];
   const users: any[] = [];
 
-  // Analyze records for privacy patterns
   for (const record of records.slice(0, 100)) {
-    // Look for common sensitive fields
     for (const [key, value] of Object.entries(record)) {
-      const lowerKey = key.toLowerCase();
+      const k = key.toLowerCase();
 
-      // Detect permission fields
-      if (lowerKey.includes('permission') || lowerKey.includes('role') || lowerKey.includes('access')) {
-        permissions.push({ level: value, userId: record.userId || 'unknown' });
+      if (k.includes('role') || k.includes('permission')) {
+        permissions.push({ level: value });
       }
 
-      // Detect encryption status
-      if (lowerKey.includes('encrypted') || lowerKey.includes('encryption')) {
+      if (k.includes('email') || k.includes('ssn') || k.includes('phone')) {
         dataItems.push({
           isSensitive: true,
           dataType: 'PHI',
-          encrypted: value === true || value === 'true',
-          encryptionType: value === true ? 'AES-256' : 'none'
+          encrypted: false
         });
       }
 
-      // Detect access logs
-      if (lowerKey.includes('access') || lowerKey.includes('login') || lowerKey.includes('timestamp')) {
+      if (k.includes('timestamp') || k.includes('access')) {
         accessLogs.push({
-          userId: record.userId || 'unknown',
-          timestamp: record.timestamp || new Date(),
+          timestamp: new Date(),
           actionType: 'read'
-        });
-      }
-
-      // Detect sensitive PHI fields
-      const sensitiveFields = ['ssn', 'phone', 'email', 'address', 'medicalrecord', 'diagnosis', 'treatment'];
-      if (sensitiveFields.some(field => lowerKey.includes(field))) {
-        dataItems.push({
-          isSensitive: true,
-          dataType: 'PHI',
-          encrypted: false,
-          encryptionType: 'none'
         });
       }
     }
 
-    // Extract user info
-    if (record.userId || record.email) {
-      users.push({
-        userId: record.userId || 'unknown',
-        email: record.email,
-        consentGiven: record.consentGiven !== false,
-        consentDate: record.consentDate || new Date()
-      });
+    if ((record as any).email) {
+      users.push({ email: (record as any).email, consentGiven: true });
     }
   }
 
   return {
     permissions,
-    dataItems: dataItems.length > 0 ? dataItems : [{ isSensitive: true, dataType: 'PHI', encrypted: false, encryptionType: 'none' }],
-    accessControl: {
-      enabled: true,
-      rolesCount: new Set(permissions.map(p => p.level)).size || 3,
-      hasAuditLog: true
-    },
+    dataItems: dataItems.length ? dataItems : [{ isSensitive: true, encrypted: false }],
+    accessControl: { enabled: true },
     accessLogs,
-    users: users.length > 0 ? users : [{ consentGiven: true }],
+    users: users.length ? users : [{ consentGiven: true }],
     auditLogging: true,
-    logRetention: 180,
-    retentionPolicy: {
-      enabled: true,
-      maxRetentionDays: 365
-    },
-    breachResponsePlan: true,
-    notificationProcedure: true,
-    maxNotificationDays: 72
+    retentionPolicy: { enabled: true }
   };
-}
-
-// Helper function for async analysis
-async function analyzeUploadedData(uploadId: string, analysisInput: any) {
-  try {
-    logger.info(`Starting async analysis for upload: ${uploadId}`);
-    // This would be a separate service in production
-    // For now, we just log it
-  } catch (error) {
-    logger.error(`Error in async analysis for upload ${uploadId}:`, error);
-  }
 }
 
 export default router;

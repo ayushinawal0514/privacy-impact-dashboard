@@ -2,14 +2,14 @@ import React from "react";
 
 export default function DataFlowVisualization() {
   return (
-    <div className="rounded-lg border bg-white p-8 shadow-sm">
-      <h3 className="text-lg font-semibold text-slate-900 mb-8">
+    <div className="rounded-lg border bg-white p-4 sm:p-6 lg:p-8 shadow-sm">
+      <h3 className="text-lg font-semibold text-slate-900 mb-6 sm:mb-8">
         Healthcare Data Flow Architecture
       </h3>
 
       <div className="flex flex-col lg:flex-row items-center justify-between gap-4 lg:gap-0">
         <div className="flex flex-col items-center">
-          <div className="w-24 h-24 rounded-lg bg-blue-100 border-2 border-blue-400 flex items-center justify-center mb-4">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-blue-100 border-2 border-blue-400 flex items-center justify-center mb-3 sm:mb-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-blue-600">👤</p>
               <p className="text-xs font-semibold text-blue-700 mt-1">Patient</p>
@@ -25,7 +25,7 @@ export default function DataFlowVisualization() {
           <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-slate-400 rotate-45 translate-y-1" />
         </div>
         <div className="flex flex-col items-center">
-          <div className="w-24 h-24 rounded-lg bg-green-100 border-2 border-green-400 flex items-center justify-center mb-4">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-green-100 border-2 border-green-400 flex items-center justify-center mb-3 sm:mb-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-green-600">☁️</p>
               <p className="text-xs font-semibold text-green-700 mt-1">Cloud</p>
@@ -42,7 +42,7 @@ export default function DataFlowVisualization() {
           <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-slate-400 rotate-45 translate-y-1" />
         </div>
         <div className="flex flex-col items-center">
-          <div className="w-24 h-24 rounded-lg bg-purple-100 border-2 border-purple-400 flex items-center justify-center mb-4">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-purple-100 border-2 border-purple-400 flex items-center justify-center mb-3 sm:mb-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-purple-600">🤖</p>
               <p className="text-xs font-semibold text-purple-700 mt-1">Risk</p>

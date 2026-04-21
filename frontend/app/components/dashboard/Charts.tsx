@@ -37,7 +37,7 @@ export function RiskDistributionChart({ data, loading }: RiskChartProps) {
   }
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height={data && data.length > 15 ? 300 : 200}>
       <BarChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="severity" />
@@ -55,8 +55,8 @@ export function ComplianceScoreChart({ score, trend }: { score: number; trend?: 
   const offset = circumference - (score / 100) * circumference;
 
   return (
-    <div className="flex flex-col items-center justify-center">
-      <div className="relative w-40 h-40">
+    <div className="flex flex-col items-center justify-center w-full">
+      <div className="relative w-32 h-32 sm:w-40 sm:h-40">
         <svg className="w-full h-full transform -rotate-90">
           <circle
             cx="80"
@@ -81,12 +81,12 @@ export function ComplianceScoreChart({ score, trend }: { score: number; trend?: 
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-3xl font-bold text-slate-900">{score}%</p>
-            <p className="text-xs text-slate-600">Score</p>
+            <p className="text-2xl sm:text-3xl font-bold text-slate-900\">{score}%</p>
+            <p className="text-xs text-slate-600\">Score</p>
           </div>
         </div>
       </div>
-      <p className="mt-4 text-sm font-medium text-slate-600">
+      <p className="mt-4 text-sm font-medium text-slate-600\">
         {score >= 80 ? "Compliant" : score >= 60 ? "Needs Review" : "Non-Compliant"}
       </p>
     </div>

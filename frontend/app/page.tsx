@@ -17,7 +17,18 @@ export default function Home() {
   }, [status, router]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-blue-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-blue-900 text-white">
+      {/* Header */}
+      <header className="bg-black/30 backdrop-blur border-b border-white/10 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <Link href="/" className="text-2xl font-bold text-white">HealthCompliance</Link>
+          <nav className="hidden md:flex gap-8 text-gray-300">
+            <Link href="#features" className="hover:text-white transition">Features</Link>
+            <Link href="/login" className="hover:text-white transition">Login</Link>
+            <Link href="/register" className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg transition">Sign Up</Link>
+          </nav>
+        </div>
+      </header>
       {/* Navigation */}
       <nav className="bg-black/20 backdrop-blur border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">

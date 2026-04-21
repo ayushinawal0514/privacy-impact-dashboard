@@ -85,7 +85,7 @@ export default function ComplianceStatus({
       {items.map((item) => (
         <div
           key={item.name}
-          className={`rounded-lg border p-4 transition-all hover:shadow-md ${getStatusColor(item.status)}`}
+          className={`rounded-lg border p-3 sm:p-4 transition-all hover:shadow-md ${getStatusColor(item.status)}`}
         >
           <div className="flex justify-between items-start mb-3">
             <div className="flex-1">

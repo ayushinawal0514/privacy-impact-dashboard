@@ -25,7 +25,7 @@ export default function DashboardLayout({
   ];
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className=\"flex min-h-screen bg-slate-50\">
       {/* Sidebar */}
       <aside
         className={`${
@@ -94,7 +94,7 @@ export default function DashboardLayout({
           </div>
         </header>
         <main className="flex-1 overflow-y-auto">
-          <div className="p-8">
+          <div className=\"p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto\">
             {children}
           </div>
         </main>

@@ -4834,7 +4834,17 @@ const headersToObject = (thing)=>thing instanceof __TURBOPACK__imported__module_
 function mergeConfig(config1, config2) {
     // eslint-disable-next-line no-param-reassign
     config2 = config2 || {};
-    const config = {};
+    // Use a null-prototype object so that downstream reads such as `config.auth`
+    // or `config.baseURL` cannot inherit polluted values from Object.prototype
+    // (see GHSA-q8qp-cvcw-x6jj). `hasOwnProperty` is restored as a non-enumerable
+    // own slot to preserve ergonomics for user code that relies on it.
+    const config = Object.create(null);
+    Object.defineProperty(config, 'hasOwnProperty', {
+        value: Object.prototype.hasOwnProperty,
+        enumerable: false,
+        writable: true,
+        configurable: true
+    });
     function getMergedValue(target, source, prop, caseless) {
         if (__TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$axios$2f$lib$2f$utils$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].isPlainObject(target) && __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$axios$2f$lib$2f$utils$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].isPlainObject(source)) {
             return __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$axios$2f$lib$2f$utils$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].merge.call({
@@ -4903,6 +4913,7 @@ function mergeConfig(config1, config2) {
         httpsAgent: defaultToConfig2,
         cancelToken: defaultToConfig2,
         socketPath: defaultToConfig2,
+        allowedSocketPaths: defaultToConfig2,
         responseEncoding: defaultToConfig2,
         validateStatus: mergeDirectKeys,
         headers: (a, b, prop)=>mergeDeepProperties(headersToObject(a), headersToObject(b), prop, true)
@@ -4946,9 +4957,20 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$
 ;
 const __TURBOPACK__default__export__ = (config)=>{
     const newConfig = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$axios$2f$lib$2f$core$2f$mergeConfig$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"])({}, config);
-    let { data, withXSRFToken, xsrfHeaderName, xsrfCookieName, headers, auth } = newConfig;
+    // Read only own properties to prevent prototype pollution gadgets
+    // (e.g. Object.prototype.baseURL = 'https://evil.com'). See GHSA-q8qp-cvcw-x6jj.
+    const own = (key)=>__TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$axios$2f$lib$2f$utils$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].hasOwnProp(newConfig, key) ? newConfig[key] : undefined;
+    const data = own('data');
+    let withXSRFToken = own('withXSRFToken');
+    const xsrfHeaderName = own('xsrfHeaderName');
+    const xsrfCookieName = own('xsrfCookieName');
+    let headers = own('headers');
+    const auth = own('auth');
+    const baseURL = own('baseURL');
+    const allowAbsoluteUrls = own('allowAbsoluteUrls');
+    const url = own('url');
     newConfig.headers = headers = __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$axios$2f$lib$2f$core$2f$AxiosHeaders$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].from(headers);
-    newConfig.url = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$axios$2f$lib$2f$helpers$2f$buildURL$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$axios$2f$lib$2f$core$2f$buildFullPath$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"])(newConfig.baseURL, newConfig.url, newConfig.allowAbsoluteUrls), config.params, config.paramsSerializer);
+    newConfig.url = (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$axios$2f$lib$2f$helpers$2f$buildURL$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$axios$2f$lib$2f$core$2f$buildFullPath$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"])(baseURL, url, allowAbsoluteUrls), config.params, config.paramsSerializer);
     // HTTP basic authentication
     if (auth) {
         headers.set('Authorization', 'Basic ' + btoa((auth.username || '') + ':' + (auth.password ? unescape(encodeURIComponent(auth.password)) : '')));
@@ -5722,7 +5744,7 @@ __turbopack_context__.s([
     "VERSION",
     ()=>VERSION
 ]);
-const VERSION = "1.15.1";
+const VERSION = "1.15.2";
 }),
 "[project]/Project/capstone_project/frontend/node_modules/axios/lib/helpers/validator.js [app-client] (ecmascript)", ((__turbopack_context__) => {
 "use strict";
@@ -5799,7 +5821,9 @@ validators.spelling = function spelling(correctSpelling) {
     let i = keys.length;
     while(i-- > 0){
         const opt = keys[i];
-        const validator = schema[opt];
+        // Use hasOwnProperty so a polluted Object.prototype.<opt> cannot supply
+        // a non-function validator and cause a TypeError. See GHSA-q8qp-cvcw-x6jj.
+        const validator = Object.prototype.hasOwnProperty.call(schema, opt) ? schema[opt] : undefined;
         if (validator) {
             const value = options[opt];
             const result = value === undefined || validator(value, opt, options);

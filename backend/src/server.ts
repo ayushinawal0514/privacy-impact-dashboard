@@ -21,7 +21,9 @@ const app: Express = express();
 const PORT = process.env.PORT || 3001;
 const API_PREFIX = '/api';
 
-// Security & parsing middleware
+// ==================
+// MIDDLEWARE
+// ==================
 app.use(helmet());
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -29,19 +31,29 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Logging middleware
 app.use(requestLogger);
 
-// Health check (no auth required)
-app.use(`${API_PREFIX}/health`, healthRouter);
+// ==================
+// PUBLIC ROUTES (NO AUTH)
+// ==================
+app.get('/', (_req: Request, res: Response) => {
+  res.json({
+    message: 'Healthcare Privacy Compliance API',
+    version: '1.0.0',
+    healthCheck: '/api/health'
+  });
+});
 
-// Auth routes
+app.use(`${API_PREFIX}/health`, healthRouter);
 app.use(`${API_PREFIX}/auth`, authRouter);
 
-// Protected routes require authentication
+// ==================
+// PROTECTED ROUTES (AUTH REQUIRED)
+// ==================
 app.use(authMiddleware);
 
 app.use(`${API_PREFIX}/risks`, risksRouter);
@@ -53,17 +65,9 @@ app.use(`${API_PREFIX}/dashboard`, dashboardRouter);
 app.use(`${API_PREFIX}/upload`, uploadRouter);
 app.use(`${API_PREFIX}/report`, reportRouter);
 
-// Root endpoint
-app.get('/', (_req: Request, res: Response) => {
-  res.json({
-    message: 'Healthcare Privacy Compliance API',
-    version: '1.0.0',
-    documentation: '/api/docs',
-    healthCheck: '/api/health'
-  });
-});
-
-// 404 handler
+// ==================
+// 404 HANDLER
+// ==================
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
@@ -72,10 +76,14 @@ app.use((req: Request, res: Response) => {
   });
 });
 
-// Error handling middleware
+// ==================
+// ERROR HANDLER
+// ==================
 app.use(errorHandler);
 
-// Database connection and server startup
+// ==================
+// START SERVER
+// ==================
 const startServer = async () => {
   try {
     await connectDB();
