@@ -13,14 +13,14 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const { limit = 50, skip = 0 } = req.query;
     
     const reports = await db.collection('audit_reports')
-      .find({ organizationId: req.user.organizationId })
+      .find({ organizationId: req.user!.organizationId })
       .sort({ createdAt: -1 })
       .skip(Number(skip))
       .limit(Number(limit))
       .toArray();
     
     const total = await db.collection('audit_reports')
-      .countDocuments({ organizationId: req.user.organizationId });
+      .countDocuments({ organizationId: req.user!.organizationId });
     
     return res.json({ 
       success: true, 
@@ -40,7 +40,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     
     const report = await db.collection('audit_reports')
-      .findOne({ _id: new ObjectId(id), organizationId: req.user.organizationId });
+      .findOne({ _id: new ObjectId(id), organizationId: req.user!.organizationId });
     
     if (!report) {
       return res.status(404).json({ success: false, message: 'Report not found' });
@@ -64,7 +64,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       type,
       findings,
       recommendations,
-      organizationId: req.user.organizationId,
+      organizationId: req.user!.organizationId,
       createdBy: req.userId,
       createdAt: new Date(),
       status: 'draft'

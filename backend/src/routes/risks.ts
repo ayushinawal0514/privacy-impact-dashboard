@@ -1,84 +1,145 @@
 import { Router, Response } from 'express';
 import { ObjectId } from 'mongodb';
-import { AuthRequest } from '../middleware/middlewares';
+import { AuthRequest, roleMiddleware } from '../middleware/middlewares';
 import { getDB } from '../config/database';
 import logger from '../config/logger';
 
 const router = Router();
 
-// Get all privacy risks
-router.get('/', async (req: AuthRequest, res: Response) => {
+/**
+ * Helper: Role-based filter
+ */
+function getRiskFilter(req: AuthRequest) {
+  const isAdmin = req.role === 'admin';
+
+  return isAdmin
+    ? { organizationId: req.user!.organizationId }
+    : {
+        organizationId: req.user!.organizationId,
+        createdBy: req.userId
+      };
+}
+
+/**
+ * ============================
+ * Get all risks
+ * ============================
+ */
+router.get('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
+    const filter = getRiskFilter(req);
+
     const risks = await db.collection('privacy_risks')
-      .find({ organizationId: req.user.organizationId })
+      .find(filter)
       .sort({ severity: -1, createdAt: -1 })
       .toArray();
-    
-    return res.json({ success: true, data: risks });
+
+    return res.json({
+      success: true,
+      role: req.role,
+      count: risks.length,
+      data: risks
+    });
   } catch (error) {
     logger.error('Error fetching risks:', error);
-    return res.status(500).json({ success: false, message: 'Failed to fetch risks' });
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch risks'
+    });
   }
 });
 
-// Get risk by ID
-router.get('/:id', async (req: AuthRequest, res: Response) => {
+/**
+ * ============================
+ * Get risk by ID
+ * ============================
+ */
+router.get('/:id', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
     const { id } = req.params;
-    
-    const risk = await db.collection('privacy_risks')
-      .findOne({ _id: new ObjectId(id), organizationId: req.user.organizationId });
-    
+
+    const filter = {
+      _id: new ObjectId(id),
+      ...getRiskFilter(req)
+    };
+
+    const risk = await db.collection('privacy_risks').findOne(filter);
+
     if (!risk) {
-      return res.status(404).json({ success: false, message: 'Risk not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'Risk not found or access denied'
+      });
     }
-    
+
     return res.json({ success: true, data: risk });
   } catch (error) {
     logger.error('Error fetching risk:', error);
-    return res.status(500).json({ success: false, message: 'Failed to fetch risk' });
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch risk'
+    });
   }
 });
 
-// Create new privacy risk
-router.post('/', async (req: AuthRequest, res: Response) => {
+/**
+ * ============================
+ * Create new risk
+ * ============================
+ */
+router.post('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
     const { dataType, severity, description, affectedUsers, mitigationPlan } = req.body;
-    
+
     const newRisk = {
       dataType,
       severity,
       description,
       affectedUsers,
       mitigationPlan,
-      organizationId: req.user.organizationId,
+      organizationId: req.user!.organizationId,
       createdBy: req.userId,
       createdAt: new Date(),
       updatedAt: new Date(),
       status: 'open'
     };
-    
+
     const result = await db.collection('privacy_risks').insertOne(newRisk);
-    
-    return res.status(201).json({ success: true, data: { _id: result.insertedId, ...newRisk } });
+
+    return res.status(201).json({
+      success: true,
+      data: { _id: result.insertedId, ...newRisk }
+    });
   } catch (error) {
     logger.error('Error creating risk:', error);
-    return res.status(500).json({ success: false, message: 'Failed to create risk' });
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create risk'
+    });
   }
 });
 
-// Update privacy risk
-router.put('/:id', async (req: AuthRequest, res: Response) => {
+/**
+ * ============================
+ * Update risk
+ * ============================
+ */
+router.put('/:id', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
     const { id } = req.params;
-    
+
+    const filter = {
+      _id: new ObjectId(id),
+      ...getRiskFilter(req)
+    };
+
     const updated = await db.collection('privacy_risks').findOneAndUpdate(
-      { _id: new ObjectId(id), organizationId: req.user.organizationId },
-      { 
+      filter,
+      {
         $set: {
           ...req.body,
           updatedAt: new Date(),
@@ -87,38 +148,63 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
       },
       { returnDocument: 'after' }
     );
-    
+
     if (!updated || !updated.value) {
-      return res.status(404).json({ success: false, message: 'Risk not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'Risk not found or access denied'
+      });
     }
-    
-    return res.json({ success: true, data: updated.value });
+
+    return res.json({
+      success: true,
+      data: updated.value
+    });
   } catch (error) {
     logger.error('Error updating risk:', error);
-    return res.status(500).json({ success: false, message: 'Failed to update risk' });
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update risk'
+    });
   }
 });
 
-// Delete privacy risk
-router.delete('/:id', async (req: AuthRequest, res: Response) => {
-  try {
-    const db = getDB();
-    const { id } = req.params;
-    
-    const result = await db.collection('privacy_risks').deleteOne({
-      _id: new ObjectId(id),
-      organizationId: req.user.organizationId
-    });
-    
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ success: false, message: 'Risk not found' });
+/**
+ * ============================
+ * Delete risk (ADMIN ONLY)
+ * ============================
+ */
+router.delete('/:id',
+  roleMiddleware(['admin']),   // 🔥 only admin can delete
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const db = getDB();
+      const { id } = req.params;
+
+      const result = await db.collection('privacy_risks').deleteOne({
+        _id: new ObjectId(id),
+        organizationId: req.user!.organizationId
+      });
+
+      if (result.deletedCount === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Risk not found'
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Risk deleted successfully'
+      });
+    } catch (error) {
+      logger.error('Error deleting risk:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to delete risk'
+      });
     }
-    
-    return res.json({ success: true, message: 'Risk deleted successfully' });
-  } catch (error) {
-    logger.error('Error deleting risk:', error);
-    return res.status(500).json({ success: false, message: 'Failed to delete risk' });
   }
-});
+);
 
 export default router;

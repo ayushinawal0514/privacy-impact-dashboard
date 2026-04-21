@@ -11,7 +11,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const db = getDB();
     const { userId, dataType, limit = 100, skip = 0 } = req.query;
     
-    const filter: any = { organizationId: req.user.organizationId };
+    const filter: any = { organizationId: req.user!.organizationId };
     if (userId) filter.userId = userId;
     if (dataType) filter.dataType = dataType;
     
@@ -47,7 +47,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       dataType,
       resourceId,
       timestamp: timestamp || new Date(),
-      organizationId: req.user.organizationId,
+      organizationId: req.user!.organizationId,
       loggedBy: req.userId,
       ipAddress: req.ip,
       userAgent: req.get('user-agent')
@@ -68,15 +68,15 @@ router.get('/analytics', async (req: AuthRequest, res: Response) => {
     const db = getDB();
     
     const totalAccesses = await db.collection('access_logs')
-      .countDocuments({ organizationId: req.user.organizationId });
+      .countDocuments({ organizationId: req.user!.organizationId });
     
     const accessByType = await db.collection('access_logs').aggregate([
-      { $match: { organizationId: req.user.organizationId } },
+      { $match: { organizationId: req.user!.organizationId } },
       { $group: { _id: '$dataType', count: { $sum: 1 } } }
     ]).toArray();
     
     const accessByUser = await db.collection('access_logs').aggregate([
-      { $match: { organizationId: req.user.organizationId } },
+      { $match: { organizationId: req.user!.organizationId } },
       { $group: { _id: '$userId', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 10 }

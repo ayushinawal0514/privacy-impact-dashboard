@@ -25,28 +25,28 @@ router.post('/generate', async (req: AuthRequest, res: Response) => {
     // Fetch data for report
     const risks = await db.collection('privacy_risks')
       .find({
-        organizationId: req.user.organizationId,
+        organizationId: req.user!.organizationId,
         createdAt: { $gte: start, $lte: end }
       })
       .toArray();
 
     const anomalies = await db.collection('anomalies')
       .find({
-        organizationId: req.user.organizationId,
+        organizationId: req.user!.organizationId,
         timestamp: { $gte: start, $lte: end }
       })
       .toArray();
 
     const accessLogs = await db.collection('access_logs')
       .find({
-        organizationId: req.user.organizationId,
+        organizationId: req.user!.organizationId,
         timestamp: { $gte: start, $lte: end }
       })
       .toArray();
 
     const analysisResults = await db.collection('analysis_results')
       .find({
-        organizationId: req.user.organizationId,
+        organizationId: req.user!.organizationId,
         createdAt: { $gte: start, $lte: end }
       })
       .toArray();
@@ -85,7 +85,7 @@ router.post('/generate', async (req: AuthRequest, res: Response) => {
 
     // Create report document
     const report = {
-      organizationId: req.user.organizationId,
+      organizationId: req.user!.organizationId,
       reportName,
       reportType,
       reportPeriod: {
@@ -154,7 +154,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const db = getDB();
     const { skip = 0, limit = 20, type } = req.query;
 
-    const query: any = { organizationId: req.user.organizationId };
+    const query: any = { organizationId: req.user!.organizationId };
     if (type) query.reportType = type;
 
     const reports = await db.collection('audit_reports')
@@ -188,7 +188,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 
     const report = await db.collection('audit_reports').findOne({
       _id: new ObjectId(id),
-      organizationId: req.user.organizationId
+      organizationId: req.user!.organizationId
     });
 
     if (!report) {
@@ -216,7 +216,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
 
     const result = await db.collection('audit_reports').deleteOne({
       _id: new ObjectId(id),
-      organizationId: req.user.organizationId
+      organizationId: req.user!.organizationId
     });
 
     if (result.deletedCount === 0) {

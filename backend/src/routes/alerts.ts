@@ -12,7 +12,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const db = getDB();
     const { severity, resolved, limit = 50, skip = 0 } = req.query;
     
-    const filter: any = { organizationId: req.user.organizationId };
+    const filter: any = { organizationId: req.user!.organizationId };
     if (severity) filter.severity = severity;
     if (resolved !== undefined) filter.resolved = resolved === 'true';
     
@@ -48,7 +48,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       severity,
       type,
       affectedResources,
-      organizationId: req.user.organizationId,
+      organizationId: req.user!.organizationId,
       createdAt: new Date(),
       resolved: false
     };
@@ -70,7 +70,7 @@ router.put('/:id/resolve', async (req: AuthRequest, res: Response) => {
     const { resolutionNotes } = req.body;
     
     const updated = await db.collection('alerts').findOneAndUpdate(
-      { _id: new ObjectId(id), organizationId: req.user.organizationId },
+      { _id: new ObjectId(id), organizationId: req.user!.organizationId },
       { 
         $set: {
           resolved: true,

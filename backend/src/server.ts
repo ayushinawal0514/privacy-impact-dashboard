@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { connectDB } from './config/database';
 import { errorHandler, requestLogger, authMiddleware } from './middleware/middlewares';
+
 import risksRouter from './routes/risks';
 import accessLogsRouter from './routes/access-logs';
 import complianceRouter from './routes/compliance';
@@ -22,9 +23,10 @@ const PORT = process.env.PORT || 3001;
 const API_PREFIX = '/api';
 
 // ==================
-// MIDDLEWARE
+// GLOBAL MIDDLEWARE
 // ==================
 app.use(helmet());
+
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true,
@@ -34,14 +36,13 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-
 app.use(requestLogger);
 
 // ==================
-// PUBLIC ROUTES (NO AUTH)
+// PUBLIC ROUTES
 // ==================
 app.get('/', (_req: Request, res: Response) => {
-  res.json({
+  return res.json({
     message: 'Healthcare Privacy Compliance API',
     version: '1.0.0',
     healthCheck: '/api/health'
@@ -52,24 +53,25 @@ app.use(`${API_PREFIX}/health`, healthRouter);
 app.use(`${API_PREFIX}/auth`, authRouter);
 
 // ==================
-// PROTECTED ROUTES (AUTH REQUIRED)
+// AUTHENTICATED ROUTES
 // ==================
 app.use(authMiddleware);
 
+// Role-based access is enforced inside individual route files
+app.use(`${API_PREFIX}/dashboard`, dashboardRouter);
+app.use(`${API_PREFIX}/upload`, uploadRouter);
 app.use(`${API_PREFIX}/risks`, risksRouter);
 app.use(`${API_PREFIX}/access-logs`, accessLogsRouter);
 app.use(`${API_PREFIX}/compliance`, complianceRouter);
 app.use(`${API_PREFIX}/audit-reports`, auditReportsRouter);
 app.use(`${API_PREFIX}/alerts`, alertsRouter);
-app.use(`${API_PREFIX}/dashboard`, dashboardRouter);
-app.use(`${API_PREFIX}/upload`, uploadRouter);
 app.use(`${API_PREFIX}/report`, reportRouter);
 
 // ==================
 // 404 HANDLER
 // ==================
 app.use((req: Request, res: Response) => {
-  res.status(404).json({
+  return res.status(404).json({
     success: false,
     message: 'Route not found',
     path: req.path

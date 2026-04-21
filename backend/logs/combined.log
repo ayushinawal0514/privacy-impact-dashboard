@@ -63,3 +63,17 @@
 {"level":"info","message":"GET /uploads - 304 (87ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 03:30:18"}
 {"level":"info","message":"GET /results/69e7edc2bc5dad6826ca34a8 - 304 (81ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 03:30:18"}
 {"level":"info","message":"GET /results/69e7edc2bc5dad6826ca34a8 - 304 (183ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 03:30:18"}
+{"level":"info","message":"POST /login - 401 (71ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 04:05:26"}
+{"level":"info","message":"POST /login - 401 (284ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 04:05:48"}
+{"level":"info","message":"POST /login - 401 (68ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 04:06:07"}
+{"level":"info","message":"POST /login - 401 (363ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 04:06:16"}
+{"level":"info","message":"POST /login - 401 (299ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 04:06:26"}
+{"level":"info","message":"POST /login - 401 (149ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 04:06:30"}
+{"level":"info","message":"POST /login - 401 (65ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 04:06:39"}
+{"level":"info","message":"POST /login - 401 (143ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 04:09:26"}
+{"level":"info","message":"POST /login - 401 (105ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 04:09:28"}
+{"level":"info","message":"POST /login - 401 (75ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 04:11:14"}
+{"level":"info","message":"POST /login - 200 (131ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 04:11:28"}
+{"level":"info","message":"POST /register - 201 (218ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 04:11:59"}
+{"level":"info","message":"POST /login - 200 (178ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 04:13:51"}
+{"level":"info","message":"GET /metrics - 200 (274ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 04:14:49"}

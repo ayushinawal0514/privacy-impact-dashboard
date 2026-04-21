@@ -11,7 +11,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const db = getDB();
     
     const complianceData = await db.collection('compliance_reports')
-      .findOne({ organizationId: req.user.organizationId }, { sort: { createdAt: -1 } });
+      .findOne({ organizationId: req.user!.organizationId }, { sort: { createdAt: -1 } });
     
     if (!complianceData) {
       return res.json({ 
@@ -39,7 +39,7 @@ router.post('/generate-report', async (req: AuthRequest, res: Response) => {
     
     // Collect risk data
     const risks = await db.collection('privacy_risks')
-      .find({ organizationId: req.user.organizationId })
+      .find({ organizationId: req.user!.organizationId })
       .toArray();
     
     // Calculate HIPAA compliance
@@ -51,7 +51,7 @@ router.post('/generate-report', async (req: AuthRequest, res: Response) => {
     const dpdpaScore = Math.max(0, 100 - (dpdpaRisks.length * 15));
     
     const report = {
-      organizationId: req.user.organizationId,
+      organizationId: req.user!.organizationId,
       hipaaCompliance: hipaaScore,
       dpdpaCompliance: dpdpaScore,
       overallScore: (hipaaScore + dpdpaScore) / 2,
@@ -80,7 +80,7 @@ router.get('/history', async (req: AuthRequest, res: Response) => {
     const { limit = 12 } = req.query;
     
     const history = await db.collection('compliance_reports')
-      .find({ organizationId: req.user.organizationId })
+      .find({ organizationId: req.user!.organizationId })
       .sort({ createdAt: -1 })
       .limit(Number(limit))
       .toArray();
