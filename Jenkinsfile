@@ -6,13 +6,14 @@ pipeline {
     }
 
     environment {
+        APP_NAME = "healthcare-privacy-platform"
+        NODE_ENV = "development"
         NEXTAUTH_URL = "http://localhost:3000"
         NEXTAUTH_SECRET = "testsecret"
         MONGODB_URI = "mongodb://localhost:27017/test"
     }
 
     stages {
-
         stage('Clean Workspace') {
             steps {
                 deleteDir()
@@ -38,18 +39,29 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Install Backend Dependencies') {
             steps {
-                bat 'npm install'
+                bat 'cd backend && npm install'
             }
         }
 
-        stage('Build Application') {
+        stage('Install Frontend Dependencies') {
             steps {
-                bat 'npm run build'
+                bat 'cd frontend && npm install'
             }
         }
 
+        stage('Build Backend') {
+            steps {
+                bat 'cd backend && npm run build'
+            }
+        }
+
+        stage('Build Frontend') {
+            steps {
+                bat 'cd frontend && npm run build'
+            }
+        }
     }
 
     post {
@@ -58,6 +70,9 @@ pipeline {
         }
         failure {
             echo 'Pipeline failed. Check logs.'
+        }
+        always {
+            echo 'Pipeline execution finished.'
         }
     }
 }
