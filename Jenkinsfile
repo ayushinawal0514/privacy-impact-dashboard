@@ -40,9 +40,6 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 script {
-                    echo "Installing root dependencies..."
-                    sh 'npm install'
-                    
                     echo "Installing backend dependencies..."
                     sh 'cd backend && npm install && cd ..'
                     
@@ -55,8 +52,11 @@ pipeline {
         stage('Lint') {
             steps {
                 script {
-                    echo "Running linter..."
-                    sh 'npm run lint || true'
+                    echo "Running backend linter..."
+                    sh 'cd backend && npm run lint || true && cd ..'
+                    
+                    echo "Running frontend linter..."
+                    sh 'cd frontend && npm run lint || true && cd ..'
                 }
             }
         }
