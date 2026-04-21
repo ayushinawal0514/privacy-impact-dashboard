@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { AuthRequest } from '../middleware/middlewares';
 import { getDB } from '../config/database';
 import logger from '../config/logger';
@@ -23,7 +23,7 @@ router.get('/metrics', async (req: AuthRequest, res: Response) => {
     const recentAlerts = await db.collection('alerts')
       .countDocuments({ organizationId: orgId, resolved: false });
     
-    res.json({
+    return res.json({
       success: true,
       data: {
         totalUsers,
@@ -34,7 +34,7 @@ router.get('/metrics', async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     logger.error('Error fetching dashboard metrics:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch metrics' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch metrics' });
   }
 });
 
@@ -57,7 +57,7 @@ router.get('/activity', async (req: AuthRequest, res: Response) => {
       .limit(Number(limit))
       .toArray();
     
-    res.json({
+    return res.json({
       success: true,
       data: {
         recentLogs,
@@ -66,7 +66,7 @@ router.get('/activity', async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     logger.error('Error fetching dashboard activity:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch activity' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch activity' });
   }
 });
 
@@ -82,10 +82,10 @@ router.get('/compliance-timeline', async (req: AuthRequest, res: Response) => {
       .limit(Number(limit))
       .toArray();
     
-    res.json({ success: true, data: timeline });
+    return res.json({ success: true, data: timeline });
   } catch (error) {
     logger.error('Error fetching compliance timeline:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch timeline' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch timeline' });
   }
 });
 

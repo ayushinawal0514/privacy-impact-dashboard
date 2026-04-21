@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { AuthRequest } from '../middleware/middlewares';
 import { getDB } from '../config/database';
 import logger from '../config/logger';
@@ -25,10 +25,10 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       });
     }
     
-    res.json({ success: true, data: complianceData });
+    return res.json({ success: true, data: complianceData });
   } catch (error) {
     logger.error('Error fetching compliance status:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch compliance status' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch compliance status' });
   }
 });
 
@@ -63,13 +63,13 @@ router.post('/generate-report', async (req: AuthRequest, res: Response) => {
     
     const result = await db.collection('compliance_reports').insertOne(report);
     
-    res.status(201).json({ 
+    return res.status(201).json({ 
       success: true, 
       data: { _id: result.insertedId, ...report }
     });
   } catch (error) {
     logger.error('Error generating compliance report:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return res.status(500).json({ success: false, message: 'Failed to generate report' });
   }
 });
 
@@ -85,10 +85,10 @@ router.get('/history', async (req: AuthRequest, res: Response) => {
       .limit(Number(limit))
       .toArray();
     
-    res.json({ success: true, data: history });
+    return res.json({ success: true, data: history });
   } catch (error) {
     logger.error('Error fetching compliance history:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch compliance history' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch compliance history' });
   }
 });
 

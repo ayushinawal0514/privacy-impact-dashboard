@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
+import { ObjectId } from 'mongodb';
 import { AuthRequest } from '../middleware/middlewares';
 import { getDB } from '../config/database';
 import logger from '../config/logger';
@@ -21,14 +22,14 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const total = await db.collection('audit_reports')
       .countDocuments({ organizationId: req.user.organizationId });
     
-    res.json({ 
+    return res.json({ 
       success: true, 
       data: reports,
       pagination: { total, limit: Number(limit), skip: Number(skip) }
     });
   } catch (error) {
     logger.error('Error fetching audit reports:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch audit reports' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch audit reports' });
   }
 });
 
@@ -39,16 +40,16 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     
     const report = await db.collection('audit_reports')
-      .findOne({ _id: id, organizationId: req.user.organizationId });
+      .findOne({ _id: new ObjectId(id), organizationId: req.user.organizationId });
     
     if (!report) {
       return res.status(404).json({ success: false, message: 'Report not found' });
     }
     
-    res.json({ success: true, data: report });
+    return res.json({ success: true, data: report });
   } catch (error) {
     logger.error('Error fetching audit report:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch audit report' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch audit report' });
   }
 });
 
@@ -71,10 +72,10 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     
     const result = await db.collection('audit_reports').insertOne(report);
     
-    res.status(201).json({ success: true, data: { _id: result.insertedId, ...report } });
+    return res.status(201).json({ success: true, data: { _id: result.insertedId, ...report } });
   } catch (error) {
     logger.error('Error creating audit report:', error);
-    res.status(500).json({ success: false, message: 'Failed to create audit report' });
+    return res.status(500).json({ success: false, message: 'Failed to create audit report' });
   }
 });
 

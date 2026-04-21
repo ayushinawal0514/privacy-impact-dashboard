@@ -81,43 +81,43 @@ export default function ComplianceStatus({
   items = defaultItems,
 }: ComplianceStatusProps) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {items.map((item) => (
         <div
           key={item.name}
-          className={`rounded-lg border-2 p-4 ${getStatusColor(item.status)}`}
+          className={`rounded-lg border p-4 transition-all hover:shadow-md ${getStatusColor(item.status)}`}
         >
           <div className="flex justify-between items-start mb-3">
-            <div>
-              <h4 className="font-semibold text-slate-900 text-sm">
+            <div className="flex-1">
+              <h4 className="font-semibold text-slate-900 text-sm leading-tight">
                 {item.name}
               </h4>
             </div>
             <span
-              className={`px-2 py-1 rounded text-xs font-bold ${getStatusBadgeColor(item.status)}`}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ml-2 ${getStatusBadgeColor(item.status)}`}
             >
               {getStatusText(item.status)}
             </span>
           </div>
 
           {item.percentage !== undefined && (
-            <div className="w-full bg-slate-300 rounded-full h-2 overflow-hidden">
-              <div
-                className={`h-full transition-all duration-300 ${
-                  item.status === "compliant"
-                    ? "bg-green-500"
-                    : item.status === "non-compliant"
-                      ? "bg-red-500"
-                      : "bg-yellow-500"
-                }`}
-                style={{ width: `${item.percentage}%` }}
-              />
-            </div>
-          )}
-          {item.percentage !== undefined && (
-            <p className="text-xs text-slate-700 mt-2">
-              {item.percentage}% Complete
-            </p>
+            <>
+              <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden shadow-inner">
+                <div
+                  className={`h-full transition-all duration-500 ${
+                    item.status === "compliant"
+                      ? "bg-gradient-to-r from-green-400 to-green-500"
+                      : item.status === "non-compliant"
+                        ? "bg-gradient-to-r from-red-400 to-red-500"
+                        : "bg-gradient-to-r from-yellow-400 to-yellow-500"
+                  }`}
+                  style={{ width: `${item.percentage}%` }}
+                />
+              </div>
+              <p className="text-xs text-slate-600 mt-2 font-medium">
+                {item.percentage}% Complete
+              </p>
+            </>
           )}
         </div>
       ))}

@@ -1,10 +1,9 @@
-import { Router, Request, Response } from 'express';
-import logger from '../config/logger';
+import { Router, Response } from 'express';
 
 const router = Router();
 
-router.get('/', (req: Request, res: Response) => {
-  res.json({
+router.get('/', (_req, res: Response) => {
+  return res.json({
     success: true,
     status: 'healthy',
     timestamp: new Date(),
@@ -13,8 +12,8 @@ router.get('/', (req: Request, res: Response) => {
   });
 });
 
-router.get('/status', (req: Request, res: Response) => {
-  res.json({
+router.get('/status', (_req, res: Response) => {
+  return res.json({
     success: true,
     service: 'Healthcare Privacy Compliance API',
     version: '1.0.0',

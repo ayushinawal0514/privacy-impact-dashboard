@@ -74,41 +74,41 @@ const getStatusColor = (status: Risk["status"]) => {
 
 export default function RiskTable({ risks = defaultRisks }: RiskTableProps) {
   return (
-    <div className="rounded-lg border bg-white shadow-sm overflow-hidden">
+    <div className="rounded-lg border bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b bg-slate-50">
-              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700">
+            <tr className="border-b bg-slate-100">
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-800 uppercase tracking-wide">
                 Risk ID
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700">
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-800 uppercase tracking-wide">
                 Risk Type
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700">
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-800 uppercase tracking-wide">
                 Severity
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700">
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-800 uppercase tracking-wide">
                 Status
               </th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {risks.map((risk) => (
-              <tr key={risk.id} className="hover:bg-slate-50 transition">
-                <td className="px-6 py-4 text-sm font-medium text-slate-900">
+              <tr key={risk.id} className="hover:bg-slate-50 transition-colors">
+                <td className="px-6 py-4 text-sm font-bold text-slate-900">
                   {risk.id}
                 </td>
-                <td className="px-6 py-4 text-sm text-slate-700">
+                <td className="px-6 py-4 text-sm text-slate-700 font-medium">
                   {risk.type}
                 </td>
                 <td className="px-6 py-4 text-sm">
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getSeverityColor(risk.severity)}`}>
+                  <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold ${getSeverityColor(risk.severity)}`}>
                     {risk.severity}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-sm">
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(risk.status)}`}>
+                  <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold ${getStatusColor(risk.status)}`}>
                     {risk.status}
                   </span>
                 </td>

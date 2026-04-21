@@ -35,10 +35,10 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
     req.user = decoded;
     req.role = decoded.role;
     
-    next();
+    return next();
   } catch (error) {
     logger.error('Authentication failed:', error);
-    res.status(401).json({ 
+    return res.status(401).json({ 
       success: false, 
       message: 'Invalid or expired token' 
     });
@@ -53,11 +53,11 @@ export const roleMiddleware = (allowedRoles: string[]) => {
         message: 'Insufficient permissions' 
       });
     }
-    next();
+    return next();
   };
 };
 
-export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
+export const errorHandler = (err: any, _req: Request, res: Response, _next: NextFunction) => {
   logger.error('Error:', err);
   
   const status = err.status || 500;

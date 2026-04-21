@@ -21,22 +21,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # Redis - Caching & Sessions
-  redis:
-    image: redis:7-alpine
-    container_name: healthcare-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - healthcare-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    restart: unless-stopped
 
   # Backend API Server
   backend:
@@ -48,26 +33,25 @@ services:
       - "3001:3001"
     environment:
       NODE_ENV: production
+      PORT: 3001
       MONGODB_URI: mongodb://admin:password@mongodb:27017/healthcare-compliance?authSource=admin
-      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
-      FRONTEND_URL: http://localhost:3000
-      ML_SERVICE_URL: http://ml-service:5000
-      LOG_LEVEL: info
-      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production-123456}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
       mongodb:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     volumes:
       - ./backend/logs:/app/logs
     networks:
       - healthcare-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 10s
+    restart: unless-stopped
 
   # Frontend Web App
   frontend:
@@ -78,26 +62,30 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3001/api
-      NEXT_PUBLIC_ML_URL: http://localhost:5000
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-your-nextauth-secret-change-in-production}
-      NEXTAUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-your-nextauth-secret-change-in-production-12345}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
     depends_on:
       - backend
     networks:
       - healthcare-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
+    restart: unless-stopped
 
-  # ML Service - Anomaly Detection
-  ml-service:
-    build:
-      context: ./ml
-      dockerfile: Dockerfile
-    container_name: healthcare-ml
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  healthcare-network:
+    driver: bridge
     ports:
       - "5000:5000"
     environment:

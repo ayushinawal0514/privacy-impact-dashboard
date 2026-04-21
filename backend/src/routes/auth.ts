@@ -33,14 +33,14 @@ router.post('/register', async (req: Request, res: Response) => {
     
     const result = await db.collection('users').insertOne(user);
     
-    res.status(201).json({ 
+    return res.status(201).json({ 
       success: true, 
       message: 'User registered successfully',
       userId: result.insertedId 
     });
   } catch (error) {
     logger.error('Error registering user:', error);
-    res.status(500).json({ success: false, message: 'Registration failed' });
+    return res.status(500).json({ success: false, message: 'Registration failed' });
   }
 });
 
@@ -71,7 +71,7 @@ router.post('/login', async (req: Request, res: Response) => {
       { expiresIn: '24h' }
     );
     
-    res.json({ 
+    return res.json({ 
       success: true, 
       token,
       user: {
@@ -83,7 +83,7 @@ router.post('/login', async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('Error logging in:', error);
-    res.status(500).json({ success: false, message: 'Login failed' });
+    return res.status(500).json({ success: false, message: 'Login failed' });
   }
 });
 

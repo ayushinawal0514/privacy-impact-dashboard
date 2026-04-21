@@ -32,24 +32,25 @@ export default function MetricCard({
         : "→";
 
   return (
-    <div className={`rounded-lg border bg-white p-6 shadow-sm ${bgColor}`}>
+    <div className={`rounded-lg border bg-white p-6 shadow-sm hover:shadow-md transition-shadow ${bgColor}`}>
       <div className="flex justify-between items-start">
         <div className="flex-1">
-          <p className="text-sm font-medium text-slate-600 mb-1">{title}</p>
-          <p className="text-3xl font-bold text-slate-900 mb-2">{value}</p>
+          <p className="text-sm font-medium text-slate-500 mb-2">{title}</p>
+          <p className="text-4xl font-bold text-slate-900 mb-3">{value}</p>
           {subtitle && (
-            <p className="text-xs text-slate-500">{subtitle}</p>
+            <p className="text-xs text-slate-600 font-medium">{subtitle}</p>
           )}
         </div>
         {icon && (
-          <div className="text-2xl opacity-20">
+          <div className="text-4xl opacity-60 flex-shrink-0 ml-4">
             {icon}
           </div>
         )}
       </div>
       {trend !== "neutral" && (
-        <div className={`mt-3 text-xs font-medium ${trendColor}`}>
-          {trendIcon} {trend === "up" ? "Increasing" : "Decreasing"}
+        <div className={`mt-4 text-xs font-semibold ${trendColor} flex items-center gap-1`}>
+          <span>{trendIcon}</span>
+          <span>{trend === "up" ? "Increasing" : "Decreasing"}</span>
         </div>
       )}
     </div>

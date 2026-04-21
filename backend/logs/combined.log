@@ -1,0 +1,4 @@
+{"level":"info","message":"POST /register - 201 (222ms)","service":"healthcare-compliance-api","timestamp":"2026-04-21 03:22:29"}
+{"level":"info","message":"POST /login - 200 (335ms)","service":"healthcare-compliance-api","timestamp":"2026-04-21 03:22:57"}
+{"level":"info","message":"GET / - 401 (0ms)","service":"healthcare-compliance-api","timestamp":"2026-04-21 03:23:20"}
+{"level":"info","message":"GET /favicon.ico - 401 (1ms)","service":"healthcare-compliance-api","timestamp":"2026-04-21 03:23:20"}

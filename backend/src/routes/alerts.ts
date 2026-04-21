@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
+import { ObjectId } from 'mongodb';
 import { AuthRequest } from '../middleware/middlewares';
 import { getDB } from '../config/database';
 import logger from '../config/logger';
@@ -24,14 +25,14 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     
     const total = await db.collection('alerts').countDocuments(filter);
     
-    res.json({ 
+    return res.json({ 
       success: true, 
       data: alerts,
       pagination: { total, limit: Number(limit), skip: Number(skip) }
     });
   } catch (error) {
     logger.error('Error fetching alerts:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch alerts' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch alerts' });
   }
 });
 
@@ -54,10 +55,10 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     
     const result = await db.collection('alerts').insertOne(alert);
     
-    res.status(201).json({ success: true, data: { _id: result.insertedId, ...alert } });
+    return res.status(201).json({ success: true, data: { _id: result.insertedId, ...alert } });
   } catch (error) {
     logger.error('Error creating alert:', error);
-    res.status(500).json({ success: false, message: 'Failed to create alert' });
+    return res.status(500).json({ success: false, message: 'Failed to create alert' });
   }
 });
 
@@ -69,7 +70,7 @@ router.put('/:id/resolve', async (req: AuthRequest, res: Response) => {
     const { resolutionNotes } = req.body;
     
     const updated = await db.collection('alerts').findOneAndUpdate(
-      { _id: id, organizationId: req.user.organizationId },
+      { _id: new ObjectId(id), organizationId: req.user.organizationId },
       { 
         $set: {
           resolved: true,
@@ -81,14 +82,14 @@ router.put('/:id/resolve', async (req: AuthRequest, res: Response) => {
       { returnDocument: 'after' }
     );
     
-    if (!updated.value) {
+    if (!updated || !updated.value) {
       return res.status(404).json({ success: false, message: 'Alert not found' });
     }
     
-    res.json({ success: true, data: updated.value });
+    return res.json({ success: true, data: updated.value });
   } catch (error) {
     logger.error('Error resolving alert:', error);
-    res.status(500).json({ success: false, message: 'Failed to resolve alert' });
+    return res.status(500).json({ success: false, message: 'Failed to resolve alert' });
   }
 });
 

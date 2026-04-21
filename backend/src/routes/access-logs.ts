@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { AuthRequest } from '../middleware/middlewares';
 import { getDB } from '../config/database';
 import logger from '../config/logger';
@@ -24,14 +24,14 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     
     const total = await db.collection('access_logs').countDocuments(filter);
     
-    res.json({ 
+    return res.json({ 
       success: true, 
       data: logs,
       pagination: { total, limit: Number(limit), skip: Number(skip) }
     });
   } catch (error) {
     logger.error('Error fetching access logs:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch access logs' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch access logs' });
   }
 });
 
@@ -55,10 +55,10 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     
     const result = await db.collection('access_logs').insertOne(accessLog);
     
-    res.status(201).json({ success: true, data: { _id: result.insertedId, ...accessLog } });
+    return res.status(201).json({ success: true, data: { _id: result.insertedId, ...accessLog } });
   } catch (error) {
     logger.error('Error logging access:', error);
-    res.status(500).json({ success: false, message: 'Failed to log access' });
+    return res.status(500).json({ success: false, message: 'Failed to log access' });
   }
 });
 
@@ -82,7 +82,7 @@ router.get('/analytics', async (req: AuthRequest, res: Response) => {
       { $limit: 10 }
     ]).toArray();
     
-    res.json({ 
+    return res.json({ 
       success: true, 
       data: {
         totalAccesses,
@@ -92,7 +92,7 @@ router.get('/analytics', async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     logger.error('Error fetching access analytics:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch analytics' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch analytics' });
   }
 });
 

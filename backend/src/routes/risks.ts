@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
+import { ObjectId } from 'mongodb';
 import { AuthRequest } from '../middleware/middlewares';
 import { getDB } from '../config/database';
 import logger from '../config/logger';
@@ -14,10 +15,10 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       .sort({ severity: -1, createdAt: -1 })
       .toArray();
     
-    res.json({ success: true, data: risks });
+    return res.json({ success: true, data: risks });
   } catch (error) {
     logger.error('Error fetching risks:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch risks' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch risks' });
   }
 });
 
@@ -28,16 +29,16 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     
     const risk = await db.collection('privacy_risks')
-      .findOne({ _id: id, organizationId: req.user.organizationId });
+      .findOne({ _id: new ObjectId(id), organizationId: req.user.organizationId });
     
     if (!risk) {
       return res.status(404).json({ success: false, message: 'Risk not found' });
     }
     
-    res.json({ success: true, data: risk });
+    return res.json({ success: true, data: risk });
   } catch (error) {
     logger.error('Error fetching risk:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch risk' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch risk' });
   }
 });
 
@@ -62,10 +63,10 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     
     const result = await db.collection('privacy_risks').insertOne(newRisk);
     
-    res.status(201).json({ success: true, data: { _id: result.insertedId, ...newRisk } });
+    return res.status(201).json({ success: true, data: { _id: result.insertedId, ...newRisk } });
   } catch (error) {
     logger.error('Error creating risk:', error);
-    res.status(500).json({ success: false, message: 'Failed to create risk' });
+    return res.status(500).json({ success: false, message: 'Failed to create risk' });
   }
 });
 
@@ -76,7 +77,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     
     const updated = await db.collection('privacy_risks').findOneAndUpdate(
-      { _id: id, organizationId: req.user.organizationId },
+      { _id: new ObjectId(id), organizationId: req.user.organizationId },
       { 
         $set: {
           ...req.body,
@@ -87,14 +88,14 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
       { returnDocument: 'after' }
     );
     
-    if (!updated.value) {
+    if (!updated || !updated.value) {
       return res.status(404).json({ success: false, message: 'Risk not found' });
     }
     
-    res.json({ success: true, data: updated.value });
+    return res.json({ success: true, data: updated.value });
   } catch (error) {
     logger.error('Error updating risk:', error);
-    res.status(500).json({ success: false, message: 'Failed to update risk' });
+    return res.status(500).json({ success: false, message: 'Failed to update risk' });
   }
 });
 
@@ -105,7 +106,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     
     const result = await db.collection('privacy_risks').deleteOne({
-      _id: id,
+      _id: new ObjectId(id),
       organizationId: req.user.organizationId
     });
     
@@ -113,10 +114,10 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, message: 'Risk not found' });
     }
     
-    res.json({ success: true, message: 'Risk deleted successfully' });
+    return res.json({ success: true, message: 'Risk deleted successfully' });
   } catch (error) {
     logger.error('Error deleting risk:', error);
-    res.status(500).json({ success: false, message: 'Failed to delete risk' });
+    return res.status(500).json({ success: false, message: 'Failed to delete risk' });
   }
 });
 

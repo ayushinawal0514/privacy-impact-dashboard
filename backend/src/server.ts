@@ -1,4 +1,4 @@
-import express, { Express, Request, Response, NextFunction } from 'express';
+import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
@@ -12,6 +12,8 @@ import alertsRouter from './routes/alerts';
 import dashboardRouter from './routes/dashboard';
 import healthRouter from './routes/health';
 import authRouter from './routes/auth';
+import uploadRouter from './routes/upload';
+import reportRouter from './routes/report';
 
 dotenv.config();
 
@@ -48,9 +50,11 @@ app.use(`${API_PREFIX}/compliance`, complianceRouter);
 app.use(`${API_PREFIX}/audit-reports`, auditReportsRouter);
 app.use(`${API_PREFIX}/alerts`, alertsRouter);
 app.use(`${API_PREFIX}/dashboard`, dashboardRouter);
+app.use(`${API_PREFIX}/upload`, uploadRouter);
+app.use(`${API_PREFIX}/report`, reportRouter);
 
 // Root endpoint
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (_req: Request, res: Response) => {
   res.json({
     message: 'Healthcare Privacy Compliance API',
     version: '1.0.0',
