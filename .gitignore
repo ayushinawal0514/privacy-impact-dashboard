@@ -48,5 +48,5 @@ yarn-error.log*
 # package-lock.json
 
 # logs
-logs/
+backend/logs/
 *.log
