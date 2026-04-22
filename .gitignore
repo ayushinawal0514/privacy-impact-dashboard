@@ -46,3 +46,7 @@ yarn-error.log*
 
 # optional: only ignore if you really do not want lockfiles
 # package-lock.json
+
+# logs
+logs/
+*.log
