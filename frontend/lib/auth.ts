@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getUserById, logSystemEvent } from "@/lib/db-operations";
-import { ObjectId } from "mongodb";
+//import { ObjectId } from "mongodb";
 
 export type UserRole = "admin" | "compliance_officer" | "data_owner" | "auditor" | "viewer";
 
@@ -190,7 +190,7 @@ export async function generateAuditTrail(
     timestamp: { $gte: startDate, $lte: endDate },
   };
 
-  if (userId) query.userId = new ObjectId(userId);
+  if (userId) query.userId = userId;
   if (action) query.actionType = action;
 
   // This would query the audit logs collection
