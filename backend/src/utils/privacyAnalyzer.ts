@@ -54,8 +54,8 @@ export class PrivacyAnalyzer {
     const anomalies = anomalyDetector.detectAnomalies(data);
 
     // Calculate compliance scores
-    const { hipaaScore, dpdpaScore } = this.calculateComplianceScores(ruleResults);
-    const overallScore = (hipaaScore + dpdpaScore) / 2;
+    const { hipaaScore, dpdpaScore } = this.calculateComplianceScores(ruleResults, anomalies);
+    const overallScore = Math.max(0, Math.min(100, (hipaaScore + dpdpaScore) / 2));
 
     // Summarize risks
     const riskSummary = this.summarizeRisks(ruleResults, anomalies);
@@ -78,64 +78,113 @@ export class PrivacyAnalyzer {
     };
   }
 
-  private calculateComplianceScores(ruleResults: RuleCheckResult[]): { hipaaScore: number; dpdpaScore: number } {
-    const hipaaRules = ruleResults.filter(r => r.ruleName.includes('HIPAA') || 
-      r.ruleName.includes('Access') || 
-      r.ruleName.includes('Encryption') ||
-      r.ruleName.includes('Audit'));
-    
-    const dpdpaRules = ruleResults.filter(r => r.ruleName.includes('DPDP') ||
-      r.ruleName.includes('Consent') ||
-      r.ruleName.includes('Minimization') ||
-      r.ruleName.includes('Retention'));
+  private calculateComplianceScores(
+    ruleResults: RuleCheckResult[],
+    anomalies: AnomalyDetectionResult[]
+  ): { hipaaScore: number; dpdpaScore: number } {
+    const hipaaRules = ruleResults.filter((r) => this.isHipaaRule(r));
+    const dpdpaRules = ruleResults.filter((r) => this.isDpdpaRule(r));
 
-    const hipaaScore = this.calculateScore(hipaaRules);
-    const dpdpaScore = this.calculateScore(dpdpaRules);
+    let hipaaScore = this.calculateScore(hipaaRules);
+    let dpdpaScore = this.calculateScore(dpdpaRules);
+
+    // Anomaly penalty so suspicious access / exports also affect compliance
+    const criticalAnomalies = anomalies.filter((a) => a.severity === 'critical').length;
+    const highAnomalies = anomalies.filter((a) => a.severity === 'high').length;
+    const mediumAnomalies = anomalies.filter((a) => a.severity === 'medium').length;
+
+    const anomalyPenalty = criticalAnomalies * 12 + highAnomalies * 7 + mediumAnomalies * 3;
+
+    hipaaScore = Math.max(0, hipaaScore - anomalyPenalty);
+    dpdpaScore = Math.max(0, dpdpaScore - Math.round(anomalyPenalty * 0.6));
 
     return { hipaaScore, dpdpaScore };
+  }
+
+  private isHipaaRule(rule: RuleCheckResult): boolean {
+    const id = rule.ruleId.toLowerCase();
+    const name = rule.ruleName.toLowerCase();
+
+    return (
+      id.startsWith('hipaa_') ||
+      id.startsWith('audit_') ||
+      id.startsWith('breach_') ||
+      name.includes('encryption') ||
+      name.includes('access control') ||
+      name.includes('permissions') ||
+      name.includes('audit') ||
+      name.includes('breach')
+    );
+  }
+
+  private isDpdpaRule(rule: RuleCheckResult): boolean {
+    const id = rule.ruleId.toLowerCase();
+    const name = rule.ruleName.toLowerCase();
+
+    return (
+      id.startsWith('dpdp_') ||
+      id.startsWith('sharing_') ||
+      name.includes('consent') ||
+      name.includes('retention') ||
+      name.includes('minimization') ||
+      name.includes('sharing') ||
+      name.includes('third-party') ||
+      name.includes('third party')
+    );
   }
 
   private calculateScore(rules: RuleCheckResult[]): number {
     if (rules.length === 0) return 100;
 
     const severityWeight: Record<string, number> = {
-      'critical': 40,
-      'high': 25,
-      'medium': 15,
-      'low': 10
+      critical: 45,
+      high: 28,
+      medium: 15,
+      low: 8
     };
 
     let totalWeight = 0;
     let failedWeight = 0;
 
     for (const rule of rules) {
-      const weight = severityWeight[rule.severity] || 10;
-      totalWeight += weight;
+      const baseWeight = severityWeight[rule.severity] || 10;
+      const countMultiplier = Math.max(1, rule.riskCount || 1);
 
-      if (!rule.passed) {
-        failedWeight += weight;
+      totalWeight += baseWeight;
+
+      if (rule.passed === false) {
+        failedWeight += baseWeight * countMultiplier;
+      } else if (rule.passed === null) {
+        // Partial / uncertain failures still reduce score a bit
+        failedWeight += baseWeight * 0.5;
       }
     }
 
-    return Math.max(0, 100 - (failedWeight / totalWeight) * 100);
+    const penaltyRatio = failedWeight / Math.max(totalWeight, 1);
+    return Math.max(0, 100 - penaltyRatio * 100);
   }
 
-  private summarizeRisks(ruleResults: RuleCheckResult[], anomalies: AnomalyDetectionResult[]): 
-    { critical: number; high: number; medium: number; low: number } {
+  private summarizeRisks(
+    ruleResults: RuleCheckResult[],
+    anomalies: AnomalyDetectionResult[]
+  ): { critical: number; high: number; medium: number; low: number } {
     const summary = { critical: 0, high: 0, medium: 0, low: 0 };
 
-    // Count failed rules by severity
+    // Count failed rules by severity, weighted by riskCount
     for (const rule of ruleResults) {
-      if (!rule.passed) {
+      if (rule.passed === false) {
         const severity = rule.severity as keyof typeof summary;
-        summary[severity]++;
+        summary[severity] += Math.max(1, rule.riskCount || 1);
+      } else if (rule.passed === null) {
+        const severity = rule.severity as keyof typeof summary;
+        summary[severity] += 1;
       }
     }
 
     // Count anomalies by severity
     for (const anomaly of anomalies) {
       const severity = anomaly.severity as keyof typeof summary;
-      summary[severity]++;
+      summary[severity] += 1;
     }
 
     return summary;
@@ -148,9 +197,9 @@ export class PrivacyAnalyzer {
   ): string[] {
     const recommendations: string[] = [];
 
-    // Add recommendations for failed rules
-    const failedRules = ruleResults.filter(r => !r.passed);
-    for (const rule of failedRules.slice(0, 5)) {
+    const failedRules = ruleResults.filter((r) => r.passed === false);
+
+    for (const rule of failedRules.slice(0, 6)) {
       switch (rule.ruleId) {
         case 'hipaa_001':
           recommendations.push('Implement principle of least privilege - reduce excessive user permissions');
@@ -179,14 +228,16 @@ export class PrivacyAnalyzer {
         case 'audit_001':
           recommendations.push('Enable comprehensive audit logging with at least 90-day retention');
           break;
+        case 'audit_002':
+          recommendations.push('Track failed access attempts and investigate repeated suspicious behavior');
+          break;
         case 'breach_001':
           recommendations.push('Develop and document breach response plan with notification procedures');
           break;
       }
     }
 
-    // Add recommendations for high-severity anomalies
-    const criticalAnomalies = anomalies.filter(a => a.severity === 'critical');
+    const criticalAnomalies = anomalies.filter((a) => a.severity === 'critical');
     for (const anomaly of criticalAnomalies.slice(0, 3)) {
       switch (anomaly.type) {
         case 'bulk_data_export':
@@ -198,25 +249,26 @@ export class PrivacyAnalyzer {
         case 'excessive_failed_logins':
           recommendations.push('Implement MFA (Multi-Factor Authentication) and account lockout policies');
           break;
+        default:
+          recommendations.push(`Investigate critical anomaly: ${anomaly.description}`);
+          break;
       }
     }
 
-    // General recommendations based on risk summary
     if (riskSummary.critical > 0) {
       recommendations.unshift('URGENT: Address critical-severity risks immediately');
     }
 
-    if (riskSummary.high > 3) {
-      recommendations.push('Conduct comprehensive security audit to identify root causes');
+    if (riskSummary.high > 5) {
+      recommendations.push('Conduct comprehensive security audit to identify systemic control gaps');
     }
 
-    // Add compliance recommendations
     if (recommendations.length < 5) {
       recommendations.push('Schedule regular compliance training for IT and security staff');
       recommendations.push('Implement continuous compliance monitoring');
     }
 
-    return recommendations.slice(0, 10);
+    return Array.from(new Set(recommendations)).slice(0, 10);
   }
 
   private generateSummary(
@@ -241,8 +293,8 @@ export class PrivacyAnalyzer {
     summary += `Risks detected: ${riskSummary.critical} critical, ${riskSummary.high} high. `;
 
     if (anomalies.length > 0) {
-      const criticalAnomalies = anomalies.filter(a => a.severity === 'critical').length;
-      summary += `${criticalAnomalies} critical anomalies detected. `;
+      const criticalAnomalyCount = anomalies.filter((a) => a.severity === 'critical').length;
+      summary += `${criticalAnomalyCount} critical anomalies detected. `;
     }
 
     summary += 'Review recommendations and take immediate action on critical items.';

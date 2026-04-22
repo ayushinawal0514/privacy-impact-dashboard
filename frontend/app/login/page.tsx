@@ -17,23 +17,31 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    if (result?.error) setError(result.error);
-    else router.push("/dashboard");
-
-    setLoading(false);
+      if (!result) {
+        setError("No response from authentication server.");
+      } else if (result.error) {
+        setError("Invalid email or password.");
+      } else if (result.ok) {
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      console.error("Login failed:", err);
+      setError("Something went wrong during sign in.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 px-4">
-      
       <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden grid md:grid-cols-2">
-
         {/* LEFT SIDE */}
         <div className="hidden md:flex flex-col justify-center items-center bg-gradient-to-br from-indigo-600 to-blue-600 text-white p-10">
           <h2 className="text-3xl font-bold mb-4">Welcome Back!</h2>
@@ -53,7 +61,7 @@ export default function LoginPage() {
           <h2 className="text-2xl font-bold mb-6 text-gray-800">Sign In</h2>
 
           {error && (
-            <div className="bg-red-100 text-red-600 p-3 rounded mb-4">
+            <div className="bg-red-100 text-red-600 p-3 rounded mb-4 text-sm">
               {error}
             </div>
           )}
@@ -62,22 +70,25 @@ export default function LoginPage() {
             <input
               type="email"
               placeholder="Email"
-              className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              required
             />
 
             <input
               type="password"
               placeholder="Password"
-              className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
             />
 
             <button
               type="submit"
-              className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition"
+              disabled={loading}
+              className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition disabled:opacity-60"
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
@@ -85,12 +96,11 @@ export default function LoginPage() {
 
           <p className="mt-4 text-sm text-gray-600">
             Don’t have an account?{" "}
-            <Link href="/signup" className="text-indigo-600 font-semibold">
+            <Link href="/register" className="text-indigo-600 font-semibold">
               Sign up
             </Link>
           </p>
         </div>
-
       </div>
     </div>
   );

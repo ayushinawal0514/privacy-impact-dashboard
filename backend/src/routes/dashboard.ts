@@ -9,9 +9,8 @@ const router = Router();
  * Build role-aware Mongo filters
  */
 function getRoleBasedFilters(req: AuthRequest) {
-  const orgId = req.user?.organizationId;
-  const userId = req.userId;
-
+  const orgId = req.user!.organizationId;
+  const userId = req.userId!;
   const isAdmin = req.role === 'admin';
 
   return {
@@ -43,22 +42,143 @@ function getRoleBasedFilters(req: AuthRequest) {
       ? { organizationId: orgId }
       : {
           organizationId: orgId,
-          $or: [
-            { userId: userId },
-            { createdBy: userId }
-          ]
+          $or: [{ userId }, { createdBy: userId }]
         },
 
     complianceFilter: isAdmin
       ? { organizationId: orgId }
       : {
           organizationId: orgId,
-          $or: [
-            { createdBy: userId },
-            { uploadedBy: userId }
-          ]
+          $or: [{ createdBy: userId }, { uploadedBy: userId }]
         }
   };
+}
+
+/**
+ * Latest upload with uploader info
+ */
+async function getLatestUploadWithUser(req: AuthRequest) {
+  const db = getDB();
+  const filters = getRoleBasedFilters(req);
+
+  const pipeline: any[] = [
+    { $match: filters.uploadsFilter },
+    { $sort: { uploadedAt: -1 } },
+    { $limit: 1 }
+  ];
+
+  if (filters.isAdmin) {
+    pipeline.push(
+      {
+        $addFields: {
+          uploadedByObjectId: {
+            $convert: {
+              input: '$uploadedBy',
+              to: 'objectId',
+              onError: null,
+              onNull: null
+            }
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'uploadedByObjectId',
+          foreignField: '_id',
+          as: 'uploader'
+        }
+      },
+      {
+        $addFields: {
+          uploadedByUser: {
+            $cond: [
+              { $gt: [{ $size: '$uploader' }, 0] },
+              {
+                id: { $arrayElemAt: ['$uploader._id', 0] },
+                email: { $arrayElemAt: ['$uploader.email', 0] },
+                name: { $arrayElemAt: ['$uploader.name', 0] },
+                role: { $arrayElemAt: ['$uploader.role', 0] }
+              },
+              null
+            ]
+          }
+        }
+      },
+      {
+        $project: {
+          uploader: 0,
+          uploadedByObjectId: 0
+        }
+      }
+    );
+  }
+
+  const result = await db.collection('uploaded_data').aggregate(pipeline).toArray();
+  return result[0] || null;
+}
+
+/**
+ * Recent uploads with uploader info for admin
+ */
+async function getRecentUploadsWithUser(req: AuthRequest, limit = 5) {
+  const db = getDB();
+  const filters = getRoleBasedFilters(req);
+
+  const pipeline: any[] = [
+    { $match: filters.uploadsFilter },
+    { $sort: { uploadedAt: -1 } },
+    { $limit: limit }
+  ];
+
+  if (filters.isAdmin) {
+    pipeline.push(
+      {
+        $addFields: {
+          uploadedByObjectId: {
+            $convert: {
+              input: '$uploadedBy',
+              to: 'objectId',
+              onError: null,
+              onNull: null
+            }
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'uploadedByObjectId',
+          foreignField: '_id',
+          as: 'uploader'
+        }
+      },
+      {
+        $addFields: {
+          uploadedByUser: {
+            $cond: [
+              { $gt: [{ $size: '$uploader' }, 0] },
+              {
+                id: { $arrayElemAt: ['$uploader._id', 0] },
+                email: { $arrayElemAt: ['$uploader.email', 0] },
+                name: { $arrayElemAt: ['$uploader.name', 0] },
+                role: { $arrayElemAt: ['$uploader.role', 0] }
+              },
+              null
+            ]
+          }
+        }
+      },
+      {
+        $project: {
+          uploader: 0,
+          uploadedByObjectId: 0
+        }
+      }
+    );
+  }
+
+  return db.collection('uploaded_data').aggregate(pipeline).toArray();
 }
 
 /**
@@ -77,6 +197,8 @@ router.get(
       const totalUsers = filters.isAdmin
         ? await db.collection('users').countDocuments({ organizationId: filters.orgId })
         : 1;
+
+      const totalUploads = await db.collection('uploaded_data').countDocuments(filters.uploadsFilter);
 
       const activeRisks = await db.collection('privacy_risks').countDocuments({
         ...filters.risksFilter,
@@ -100,6 +222,7 @@ router.get(
         success: true,
         data: {
           totalUsers,
+          totalUploads,
           activeRisks,
           complianceScore: latest?.complianceScore || 0,
           hipaaCompliance: latest?.hipaaCompliance || 0,
@@ -144,11 +267,13 @@ router.get(
         .limit(Number(limit))
         .toArray();
 
-      const recentUploads = await db.collection('uploaded_data')
-        .find(filters.uploadsFilter)
-        .sort({ uploadedAt: -1 })
-        .limit(Number(limit))
-        .toArray();
+      const recentUploads = filters.isAdmin
+        ? await getRecentUploadsWithUser(req, Number(limit))
+        : await db.collection('uploaded_data')
+            .find(filters.uploadsFilter)
+            .sort({ uploadedAt: -1 })
+            .limit(Number(limit))
+            .toArray();
 
       return res.json({
         success: true,
@@ -217,17 +342,23 @@ router.get(
       const db = getDB();
       const filters = getRoleBasedFilters(req);
 
-      const latestUpload = await db.collection('uploaded_data')
-        .find(filters.uploadsFilter)
-        .sort({ uploadedAt: -1 })
-        .limit(1)
-        .toArray();
+      const latestUpload = await getLatestUploadWithUser(req);
 
       const latestAnalysis = await db.collection('analysis_results')
         .find(filters.analysisFilter)
         .sort({ createdAt: -1 })
         .limit(1)
         .toArray();
+
+      const totalUploads = await db.collection('uploaded_data').countDocuments(filters.uploadsFilter);
+
+      const recentUploads = filters.isAdmin
+        ? await getRecentUploadsWithUser(req, 5)
+        : await db.collection('uploaded_data')
+            .find(filters.uploadsFilter)
+            .sort({ uploadedAt: -1 })
+            .limit(5)
+            .toArray();
 
       const riskCounts = {
         critical: await db.collection('privacy_risks').countDocuments({
@@ -252,8 +383,10 @@ router.get(
         success: true,
         data: {
           role: req.role,
-          latestUpload: latestUpload[0] || null,
+          totalUploads,
+          latestUpload,
           latestAnalysis: latestAnalysis[0] || null,
+          recentUploads,
           risks: riskCounts
         }
       });

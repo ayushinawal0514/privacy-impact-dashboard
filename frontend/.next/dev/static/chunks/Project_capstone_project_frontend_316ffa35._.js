@@ -29,14 +29,25 @@ function LoginPage() {
         e.preventDefault();
         setError("");
         setLoading(true);
-        const result = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2d$auth$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["signIn"])("credentials", {
-            email,
-            password,
-            redirect: false
-        });
-        if (result?.error) setError(result.error);
-        else router.push("/dashboard");
-        setLoading(false);
+        try {
+            const result = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2d$auth$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["signIn"])("credentials", {
+                email,
+                password,
+                redirect: false
+            });
+            if (!result) {
+                setError("No response from authentication server.");
+            } else if (result.error) {
+                setError("Invalid email or password.");
+            } else if (result.ok) {
+                router.push("/dashboard");
+            }
+        } catch (err) {
+            console.error("Login failed:", err);
+            setError("Something went wrong during sign in.");
+        } finally{
+            setLoading(false);
+        }
     };
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
         className: "min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 px-4",
@@ -51,7 +62,7 @@ function LoginPage() {
                             children: "Welcome Back!"
                         }, void 0, false, {
                             fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
-                            lineNumber: 39,
+                            lineNumber: 47,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -59,7 +70,7 @@ function LoginPage() {
                             children: "Enter your credentials to access your dashboard"
                         }, void 0, false, {
                             fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
-                            lineNumber: 40,
+                            lineNumber: 48,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -68,13 +79,13 @@ function LoginPage() {
                             children: "Create Account"
                         }, void 0, false, {
                             fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
-                            lineNumber: 43,
+                            lineNumber: 51,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
-                    lineNumber: 38,
+                    lineNumber: 46,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -85,15 +96,15 @@ function LoginPage() {
                             children: "Sign In"
                         }, void 0, false, {
                             fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
-                            lineNumber: 53,
+                            lineNumber: 61,
                             columnNumber: 11
                         }, this),
                         error && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            className: "bg-red-100 text-red-600 p-3 rounded mb-4",
+                            className: "bg-red-100 text-red-600 p-3 rounded mb-4 text-sm",
                             children: error
                         }, void 0, false, {
                             fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
-                            lineNumber: 56,
+                            lineNumber: 64,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("form", {
@@ -103,49 +114,32 @@ function LoginPage() {
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                     type: "email",
                                     placeholder: "Email",
-                                    className: "w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-indigo-500",
+                                    className: "w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none",
                                     value: email,
-                                    onChange: (e)=>setEmail(e.target.value)
-                                }, void 0, false, {
-                                    fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
-                                    lineNumber: 62,
-                                    columnNumber: 13
-                                }, this),
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                                    type: "password",
-                                    placeholder: "Password",
-                                    className: "w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-indigo-500",
-                                    value: password,
-                                    onChange: (e)=>setPassword(e.target.value)
+                                    onChange: (e)=>setEmail(e.target.value),
+                                    required: true
                                 }, void 0, false, {
                                     fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
                                     lineNumber: 70,
                                     columnNumber: 13
                                 }, this),
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                                    type: "submit",
-                                    className: "w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition",
-                                    children: loading ? "Signing in..." : "Sign In"
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                    type: "password",
+                                    placeholder: "Password",
+                                    className: "w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none",
+                                    value: password,
+                                    onChange: (e)=>setPassword(e.target.value),
+                                    required: true
                                 }, void 0, false, {
                                     fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
-                                    lineNumber: 78,
+                                    lineNumber: 79,
                                     columnNumber: 13
-                                }, this)
-                            ]
-                        }, void 0, true, {
-                            fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
-                            lineNumber: 61,
-                            columnNumber: 11
-                        }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                            className: "mt-4 text-sm text-gray-600",
-                            children: [
-                                "Don’t have an account?",
-                                " ",
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
-                                    href: "/signup",
-                                    className: "text-indigo-600 font-semibold",
-                                    children: "Sign up"
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                    type: "submit",
+                                    disabled: loading,
+                                    className: "w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition disabled:opacity-60",
+                                    children: loading ? "Signing in..." : "Sign In"
                                 }, void 0, false, {
                                     fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
                                     lineNumber: 88,
@@ -154,24 +148,44 @@ function LoginPage() {
                             ]
                         }, void 0, true, {
                             fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
-                            lineNumber: 86,
+                            lineNumber: 69,
+                            columnNumber: 11
+                        }, this),
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                            className: "mt-4 text-sm text-gray-600",
+                            children: [
+                                "Don’t have an account?",
+                                " ",
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
+                                    href: "/register",
+                                    className: "text-indigo-600 font-semibold",
+                                    children: "Sign up"
+                                }, void 0, false, {
+                                    fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
+                                    lineNumber: 99,
+                                    columnNumber: 13
+                                }, this)
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
+                            lineNumber: 97,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
-                    lineNumber: 52,
+                    lineNumber: 60,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
-            lineNumber: 35,
+            lineNumber: 44,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/Project/capstone_project/frontend/app/login/page.tsx",
-        lineNumber: 33,
+        lineNumber: 43,
         columnNumber: 5
     }, this);
 }

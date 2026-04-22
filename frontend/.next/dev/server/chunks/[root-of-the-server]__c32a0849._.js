@@ -180,8 +180,6 @@ const authOptions = {
                     const response = await __TURBOPACK__imported__module__$5b$project$5d2f$Project$2f$capstone_project$2f$frontend$2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].post(`${("TURBOPACK compile-time value", "http://localhost:3001/api")}/auth/login`, {
                         email: credentials.email,
                         password: credentials.password
-                    }, {
-                        baseURL: ("TURBOPACK compile-time value", "http://localhost:3001/api")?.replace('/api', '') || 'http://localhost:3001'
                     });
                     if (response.data.success && response.data.token) {
                         return {
@@ -189,6 +187,8 @@ const authOptions = {
                             email: response.data.user.email,
                             name: response.data.user.name,
                             image: null,
+                            role: response.data.user.role,
+                            organizationId: response.data.user.organizationId,
                             accessToken: response.data.token
                         };
                     }
@@ -206,23 +206,27 @@ const authOptions = {
         error: '/login'
     },
     callbacks: {
-        async jwt ({ token, user, account }) {
+        async jwt ({ token, user }) {
             if (user) {
-                token.accessToken = user.accessToken;
                 token.id = user.id;
+                token.accessToken = user.accessToken;
+                token.role = user.role;
+                token.organizationId = user.organizationId;
             }
             return token;
         },
         async session ({ session, token }) {
             if (session.user) {
                 session.user.id = token.id;
+                session.user.role = token.role;
+                session.user.organizationId = token.organizationId;
                 session.accessToken = token.accessToken;
             }
             return session;
         }
     },
     events: {
-        async signIn ({ user, account, profile, isNewUser }) {
+        async signIn ({ user }) {
             console.log('User signed in:', user.email);
         }
     }
