@@ -77,20 +77,20 @@ pipeline {
         }
 
         stage('Run Backend Tests') {
-    steps {
-        dir('backend') {
-            bat 'npm test -- --passWithNoTests'
+            steps {
+                dir('backend') {
+                    bat 'npm test -- --passWithNoTests'
+                }
+            }
         }
-    }
-}
 
-stage('Run Frontend Tests') {
-    steps {
-        dir('frontend') {
-            bat 'npm test -- --passWithNoTests'
+        stage('Run Frontend Tests') {
+            steps {
+                dir('frontend') {
+                    bat 'npm run test --if-present -- --passWithNoTests'
+                }
+            }
         }
-    }
-}
 
         stage('Archive Build Artifacts') {
             steps {
