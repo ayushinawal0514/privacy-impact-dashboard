@@ -56,6 +56,7 @@ export const apiEndpoints = {
   accessLogs: {
     list: '/access-logs',
     get: (id: string) => `/access-logs/${id}`,
+    analytics: '/access-logs/analytics',
   },
 
   upload: {
@@ -186,6 +187,11 @@ export const apiMethods = {
     return client.get(apiEndpoints.accessLogs.list, {
       params: { skip, limit, ...filters },
     });
+  },
+
+  getAccessLogAnalytics: async () => {
+    const client = getApiClient();
+    return client.get(apiEndpoints.accessLogs.analytics);
   },
 
   getCurrentUser: async () => {

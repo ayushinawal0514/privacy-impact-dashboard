@@ -196,6 +196,14 @@ export default function ComplianceDashboard() {
 
   return (
     <EnhancedDashboardLayout activeSection="compliance" userRole={session?.user?.role}>
+      <div className="flex items-center justify-between mb-4">
+  <button
+    onClick={() => router.push("/dashboard")}
+    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+  >
+    ← Back to Dashboard
+  </button>
+</div>
       <div className="space-y-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Compliance Dashboard</h1>
@@ -219,6 +227,7 @@ export default function ComplianceDashboard() {
             </div>
             <ComplianceScoreChart score={complianceData?.hipaaCompliance || 0} />
           </div>
+          
 
           <div className="bg-white rounded-lg border shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">

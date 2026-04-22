@@ -277,8 +277,8 @@ export default function UserDashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ActionLink href="/compliance" label="View Compliance" tone="cyan" />
               <ActionLink href="/upload" label="Upload Data" tone="purple" />
-              <ActionLink href="/compliance" label="Generate Report" tone="pink" />
-              <ActionLink href="/compliance" label="View Risks" tone="green" />
+              <ActionLink href="/audit-reports" label="Generate Report" tone="pink" />
+              <ActionLink href="/risks" label="View Risks" tone="green" />
             </div>
           </div>
 
