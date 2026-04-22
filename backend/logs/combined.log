@@ -564,3 +564,9 @@
 {"level":"info","message":"PUT /69e8a3300326f3e4823a83c8/resolve - 404 (93ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 16:35:21"}
 {"level":"info","message":"GET /summary - 304 (1467ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 16:35:37"}
 {"level":"info","message":"GET /summary - 304 (972ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 16:35:38"}
+{"level":"info","message":"GET /summary - 304 (1047ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 16:42:29"}
+{"level":"info","message":"GET /summary - 304 (913ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 16:42:32"}
+{"level":"info","message":"GET /summary - 304 (1275ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 16:42:41"}
+{"level":"info","message":"GET /summary - 304 (825ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 16:42:42"}
+{"level":"info","message":"GET /summary - 304 (1590ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 16:43:04"}
+{"level":"info","message":"GET /summary - 304 (4934ms)","service":"healthcare-compliance-api","timestamp":"2026-04-22 16:43:28"}
