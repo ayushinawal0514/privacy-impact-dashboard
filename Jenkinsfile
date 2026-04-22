@@ -12,7 +12,7 @@ pipeline {
 
     environment {
         APP_NAME = "healthcare-privacy-platform"
-        NODE_ENV = "development"
+        NODE_ENV = "production"
 
         NEXTAUTH_URL = "http://localhost:3000"
         NEXT_PUBLIC_API_URL = "http://localhost:3001/api"
