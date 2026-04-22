@@ -308,7 +308,10 @@ export function detectAnomalies(
   }
 
   const hour = new Date(currentAccess.timestamp).getHours();
-  if (!baseline.commonAccessTimes?.includes(hour)) {
+  if (
+  Array.isArray(baseline.commonAccessTimes) &&
+  !baseline.commonAccessTimes.includes(hour)
+) {
     anomalyScore += 0.2;
     anomalyType = anomalyType ? `${anomalyType},unusual_time` : "unusual_time";
   }
