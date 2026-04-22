@@ -1,16 +1,92 @@
 import { Router, Response } from 'express';
-import { AuthRequest } from '../middleware/middlewares';
+import { ObjectId } from 'mongodb';
+import { AuthRequest, roleMiddleware } from '../middleware/middlewares';
 import { getDB } from '../config/database';
 import logger from '../config/logger';
-import { ObjectId } from 'mongodb';
+import { logAccess } from '../services/accessLogger';
 
 const router = Router();
 
-// Generate compliance report
-router.post('/generate', async (req: AuthRequest, res: Response) => {
+function getReportFilter(req: AuthRequest) {
+  const isAdmin = req.role === 'admin';
+
+  return isAdmin
+    ? { organizationId: req.user!.organizationId }
+    : {
+        organizationId: req.user!.organizationId,
+        generatedBy: req.userId
+      };
+}
+
+function severityValue(severity?: string) {
+  const map: Record<string, number> = {
+    critical: 4,
+    high: 3,
+    medium: 2,
+    low: 1
+  };
+  return map[String(severity || '').toLowerCase()] || 0;
+}
+
+/**
+ * Generate recommendations based on actual dataset results
+ */
+function generateRecommendationsFromAnalysis(
+  requirements: any,
+  totalRisks: number,
+  overallScore: number
+): string[] {
+  const recommendations: string[] = [];
+
+  if ((requirements?.encryption?.score ?? 0) < 100) {
+    recommendations.push('Enable encryption for all stored healthcare records.');
+  }
+
+  if ((requirements?.consent?.score ?? 0) < 100) {
+    recommendations.push('Obtain and track explicit consent for all patient records.');
+  }
+
+  if ((requirements?.accessControl?.score ?? 0) < 100) {
+    recommendations.push('Restrict access to approved healthcare roles only.');
+  }
+
+  if ((requirements?.auditLogging?.score ?? 0) < 100) {
+    recommendations.push('Enable audit logging to maintain traceability.');
+  }
+
+  if ((requirements?.retention?.score ?? 0) < 100) {
+    recommendations.push('Review and reduce retention periods according to policy.');
+  }
+
+  if (totalRisks > 0 && overallScore < 40) {
+    recommendations.push('Immediate remediation is required due to significant compliance violations.');
+  } else if (totalRisks > 0 && overallScore < 70) {
+    recommendations.push('Prioritize remediation of critical and high-severity findings.');
+  } else if (totalRisks === 0) {
+    recommendations.push('Current dataset satisfies all monitored compliance checks.');
+  }
+
+  recommendations.push('Continue continuous monitoring and periodic compliance reviews.');
+
+  return recommendations.slice(0, 10);
+}
+
+/**
+ * ============================
+ * Generate audit report from real dataset analysis
+ * ============================
+ */
+router.post('/generate', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
-    const { reportName, reportType = 'custom', startDate, endDate } = req.body;
+    const {
+      reportName,
+      reportType = 'dataset',
+      datasetId,
+      datasetName,
+      startDate,
+      endDate
+    } = req.body;
 
     if (!reportName) {
       return res.status(400).json({
@@ -19,66 +95,82 @@ router.post('/generate', async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const start = new Date(startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
-    const end = new Date(endDate || Date.now());
+    const analysisFilter: any = {
+      organizationId: req.user!.organizationId
+    };
 
-    // Fetch data for report
-    const risks = await db.collection('privacy_risks')
-      .find({
-        organizationId: req.user!.organizationId,
-        createdAt: { $gte: start, $lte: end }
-      })
+    if (req.role !== 'admin') {
+      analysisFilter.createdBy = req.userId;
+    }
+
+    if (datasetId && typeof datasetId === 'string' && ObjectId.isValid(datasetId)) {
+      analysisFilter.datasetId = new ObjectId(datasetId);
+    }
+
+    if (datasetName && typeof datasetName === 'string') {
+      analysisFilter.datasetName = datasetName.trim();
+    }
+
+    if (startDate || endDate) {
+      analysisFilter.createdAt = {};
+      if (startDate) analysisFilter.createdAt.$gte = new Date(startDate);
+      if (endDate) analysisFilter.createdAt.$lte = new Date(endDate);
+    }
+
+    const latestAnalysisArr = await db.collection('dataset_analysis')
+      .find(analysisFilter)
+      .sort({ createdAt: -1 })
+      .limit(1)
       .toArray();
 
-    const anomalies = await db.collection('anomalies')
-      .find({
-        organizationId: req.user!.organizationId,
-        timestamp: { $gte: start, $lte: end }
-      })
+    const latestAnalysis = latestAnalysisArr[0];
+
+    if (!latestAnalysis) {
+      return res.status(404).json({
+        success: false,
+        message: 'No dataset analysis found to generate report'
+      });
+    }
+
+    const commonFilter: any = {
+      organizationId: req.user!.organizationId,
+      datasetId: latestAnalysis.datasetId
+    };
+
+    const risks = await db.collection('privacy_risks')
+      .find(commonFilter)
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    const alerts = await db.collection('alerts')
+      .find(commonFilter)
+      .sort({ createdAt: -1 })
       .toArray();
 
     const accessLogs = await db.collection('access_logs')
       .find({
         organizationId: req.user!.organizationId,
-        timestamp: { $gte: start, $lte: end }
+        ...(latestAnalysis.datasetName ? { datasetName: latestAnalysis.datasetName } : {})
       })
+      .sort({ timestamp: -1 })
       .toArray();
 
-    const analysisResults = await db.collection('analysis_results')
-      .find({
-        organizationId: req.user!.organizationId,
-        createdAt: { $gte: start, $lte: end }
-      })
-      .toArray();
-
-    // Calculate metrics
     const riskSummary = {
-      critical: risks.filter(r => r.severity === 'critical').length,
-      high: risks.filter(r => r.severity === 'high').length,
-      medium: risks.filter(r => r.severity === 'medium').length,
-      low: risks.filter(r => r.severity === 'low').length
+      critical: risks.filter((r: any) => r.severity === 'critical').length,
+      high: risks.filter((r: any) => r.severity === 'high').length,
+      medium: risks.filter((r: any) => r.severity === 'medium').length,
+      low: risks.filter((r: any) => r.severity === 'low').length
     };
 
-    const anomalySummary = {
-      critical: anomalies.filter(a => a.severity === 'critical').length,
-      high: anomalies.filter(a => a.severity === 'high').length,
-      medium: anomalies.filter(a => a.severity === 'medium').length,
-      low: anomalies.filter(a => a.severity === 'low').length
+    const alertSummary = {
+      critical: alerts.filter((a: any) => a.severity === 'critical').length,
+      high: alerts.filter((a: any) => a.severity === 'high').length,
+      medium: alerts.filter((a: any) => a.severity === 'medium').length,
+      low: alerts.filter((a: any) => a.severity === 'low').length,
+      resolved: alerts.filter((a: any) => a.resolved === true).length,
+      open: alerts.filter((a: any) => a.resolved !== true).length
     };
 
-    const avgComplianceScore = analysisResults.length > 0
-      ? Math.round(analysisResults.reduce((sum, r) => sum + r.complianceScore, 0) / analysisResults.length)
-      : 0;
-
-    const avgHipaaScore = analysisResults.length > 0
-      ? Math.round(analysisResults.reduce((sum, r) => sum + r.hipaaCompliance, 0) / analysisResults.length)
-      : 0;
-
-    const avgDpdpaScore = analysisResults.length > 0
-      ? Math.round(analysisResults.reduce((sum, r) => sum + r.dpdpaCompliance, 0) / analysisResults.length)
-      : 0;
-
-    // Normalize access log fields
     const normalizedAccessLogs = accessLogs.map((log: any) => ({
       ...log,
       normalizedAction: String(log.action || log.actionType || '').toLowerCase(),
@@ -86,79 +178,80 @@ router.post('/generate', async (req: AuthRequest, res: Response) => {
     }));
 
     const uniqueUsers = new Set(
-      normalizedAccessLogs
-        .map((log: any) => log.userId)
-        .filter(Boolean)
+      normalizedAccessLogs.map((log: any) => log.userId).filter(Boolean)
     ).size;
 
-    const failedAccess = normalizedAccessLogs.filter(
-      (log: any) => log.normalizedStatus === 'failure'
-    ).length;
+    const accessMetrics = {
+      totalAccess: accessLogs.length,
+      failedAccess: normalizedAccessLogs.filter((log: any) => log.normalizedStatus === 'failure').length,
+      uniqueUsers,
+      readOperations: normalizedAccessLogs.filter((log: any) => log.normalizedAction === 'read').length,
+      writeOperations: normalizedAccessLogs.filter((log: any) => log.normalizedAction === 'write').length,
+      updateOperations: normalizedAccessLogs.filter((log: any) => log.normalizedAction === 'update').length,
+      deleteOperations: normalizedAccessLogs.filter((log: any) => log.normalizedAction === 'delete').length,
+      exportOperations: normalizedAccessLogs.filter((log: any) => log.normalizedAction === 'export').length
+    };
 
-    const readOperations = normalizedAccessLogs.filter(
-      (log: any) => log.normalizedAction === 'read'
-    ).length;
+    const recommendations = generateRecommendationsFromAnalysis(
+      latestAnalysis.compliance?.requirements || {},
+      latestAnalysis.summary?.totalRisks || 0,
+      latestAnalysis.compliance?.overallScore || 0
+    );
 
-    const writeOperations = normalizedAccessLogs.filter(
-      (log: any) => log.normalizedAction === 'write'
-    ).length;
-
-    const deleteOperations = normalizedAccessLogs.filter(
-      (log: any) => log.normalizedAction === 'delete'
-    ).length;
-
-    const exportOperations = normalizedAccessLogs.filter(
-      (log: any) => log.normalizedAction === 'export'
-    ).length;
-
-    // Create report document
     const report = {
       organizationId: req.user!.organizationId,
-      reportName,
+      datasetId: latestAnalysis.datasetId || null,
+      datasetName: latestAnalysis.datasetName || null,
+      reportName: String(reportName).trim(),
       reportType,
       reportPeriod: {
-        startDate: start,
-        endDate: end
+        startDate: startDate ? new Date(startDate) : latestAnalysis.createdAt,
+        endDate: endDate ? new Date(endDate) : new Date()
       },
       summary: {
-        totalEvents: accessLogs.length,
-        risksIdentified: risks.length,
-        complianceScore: avgComplianceScore,
-        hipaaCompliance: avgHipaaScore,
-        dpdpaCompliance: avgDpdpaScore,
-        anomaliesDetected: anomalies.length,
+        totalRecords: latestAnalysis.summary?.totalRecords || 0,
+        totalRisks: latestAnalysis.summary?.totalRisks || 0,
+        complianceScore: latestAnalysis.compliance?.overallScore || 0,
+        hipaaCompliance: latestAnalysis.compliance?.hipaaScore || 0,
+        dpdpaCompliance: latestAnalysis.compliance?.dpdpaScore || 0,
+        totalAlerts: alerts.length,
+        totalAccessEvents: accessLogs.length,
         uniqueUsers
       },
       details: {
         risks: riskSummary,
-        anomalies: anomalySummary,
-        accessMetrics: {
-          totalAccess: accessLogs.length,
-          failedAccess,
-          uniqueUsers,
-          readOperations,
-          writeOperations,
-          deleteOperations,
-          exportOperations
-        }
+        alerts: alertSummary,
+        complianceRequirements: latestAnalysis.compliance?.requirements || {},
+        accessMetrics
       },
       topRisks: risks
-        .sort((a: any, b: any) => {
-          const severityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
-          return (severityOrder[b.severity as keyof typeof severityOrder] || 0) -
-                 (severityOrder[a.severity as keyof typeof severityOrder] || 0);
-        })
+        .sort((a: any, b: any) => severityValue(b.severity) - severityValue(a.severity))
         .slice(0, 10),
-      topAnomalies: anomalies
-        .sort((a: any, b: any) => (b.confidence || 0) - (a.confidence || 0))
+      topAlerts: alerts
+        .sort((a: any, b: any) => severityValue(b.severity) - severityValue(a.severity))
         .slice(0, 10),
-      recommendations: generateRecommendations(riskSummary, anomalySummary, avgComplianceScore),
+      recommendations,
+      source: 'dataset_analysis',
       generatedBy: req.userId,
       generatedAt: new Date(),
       createdAt: new Date()
     };
 
     const result = await db.collection('audit_reports').insertOne(report);
+
+    await logAccess({
+      userId: req.userId!,
+      organizationId: req.user!.organizationId,
+      action: 'export',
+      dataType: 'health',
+      datasetId: latestAnalysis.datasetId?.toString?.(),
+      datasetName: latestAnalysis.datasetName,
+      resourceId: `report:${result.insertedId.toString()}`,
+      status: 'success',
+      loggedBy: req.userId!,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') || undefined
+    });
 
     return res.status(201).json({
       success: true,
@@ -175,14 +268,27 @@ router.post('/generate', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Get all reports
-router.get('/', async (req: AuthRequest, res: Response) => {
+/**
+ * ============================
+ * Get all reports
+ * ============================
+ */
+router.get('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
-    const { skip = 0, limit = 20, type } = req.query;
+    const { skip = 0, limit = 20, type, datasetName } = req.query;
 
-    const query: any = { organizationId: req.user!.organizationId };
-    if (type) query.reportType = type;
+    const query: any = {
+      ...getReportFilter(req)
+    };
+
+    if (type && typeof type === 'string') {
+      query.reportType = type;
+    }
+
+    if (datasetName && typeof datasetName === 'string') {
+      query.datasetName = datasetName.trim();
+    }
 
     const reports = await db.collection('audit_reports')
       .find(query)
@@ -192,6 +298,19 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       .toArray();
 
     const total = await db.collection('audit_reports').countDocuments(query);
+
+    await logAccess({
+      userId: req.userId!,
+      organizationId: req.user!.organizationId,
+      action: 'read',
+      dataType: 'health',
+      datasetName: typeof datasetName === 'string' ? datasetName.trim() : undefined,
+      resourceId: 'reports:list',
+      status: 'success',
+      loggedBy: req.userId!,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') || undefined
+    });
 
     return res.json({
       success: true,
@@ -207,8 +326,12 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Get report by ID
-router.get('/:id', async (req: AuthRequest, res: Response) => {
+/**
+ * ============================
+ * Get report by ID
+ * ============================
+ */
+router.get('/:id', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
     const { id } = req.params;
@@ -222,7 +345,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 
     const report = await db.collection('audit_reports').findOne({
       _id: new ObjectId(id),
-      organizationId: req.user!.organizationId
+      ...getReportFilter(req)
     });
 
     if (!report) {
@@ -231,6 +354,20 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
         message: 'Report not found'
       });
     }
+
+    await logAccess({
+      userId: req.userId!,
+      organizationId: req.user!.organizationId,
+      action: 'read',
+      dataType: 'health',
+      datasetId: report.datasetId?.toString?.(),
+      datasetName: report.datasetName,
+      resourceId: `report:${id}`,
+      status: 'success',
+      loggedBy: req.userId!,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') || undefined
+    });
 
     return res.json({ success: true, data: report });
   } catch (error) {
@@ -242,8 +379,12 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Delete report
-router.delete('/:id', async (req: AuthRequest, res: Response) => {
+/**
+ * ============================
+ * Delete report
+ * ============================
+ */
+router.delete('/:id', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
     const { id } = req.params;
@@ -255,9 +396,21 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const report = await db.collection('audit_reports').findOne({
+      _id: new ObjectId(id),
+      ...getReportFilter(req)
+    });
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: 'Report not found'
+      });
+    }
+
     const result = await db.collection('audit_reports').deleteOne({
       _id: new ObjectId(id),
-      organizationId: req.user!.organizationId
+      ...getReportFilter(req)
     });
 
     if (result.deletedCount === 0) {
@@ -266,6 +419,20 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
         message: 'Report not found'
       });
     }
+
+    await logAccess({
+      userId: req.userId!,
+      organizationId: req.user!.organizationId,
+      action: 'delete',
+      dataType: 'health',
+      datasetId: report.datasetId?.toString?.(),
+      datasetName: report.datasetName,
+      resourceId: `report:${id}`,
+      status: 'success',
+      loggedBy: req.userId!,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') || undefined
+    });
 
     return res.json({
       success: true,
@@ -279,43 +446,5 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
     });
   }
 });
-
-// Generate recommendations based on findings
-function generateRecommendations(
-  riskSummary: any,
-  anomalySummary: any,
-  complianceScore: number
-): string[] {
-  const recommendations: string[] = [];
-
-  if (riskSummary.critical > 0) {
-    recommendations.push('URGENT: Immediately address all critical-severity risks.');
-    recommendations.push('Conduct emergency security audit and implement remediation.');
-  }
-
-  if (riskSummary.high > 3) {
-    recommendations.push('Review and prioritize high-severity risks for immediate resolution.');
-  }
-
-  if (anomalySummary.critical > 0) {
-    recommendations.push('Investigate critical anomalies - potential security breach detected.');
-  }
-
-  if (complianceScore < 60) {
-    recommendations.push('Significant compliance gaps identified. Implement comprehensive remediation plan.');
-    recommendations.push('Consider third-party security assessment to identify root causes.');
-  } else if (complianceScore < 80) {
-    recommendations.push('Compliance score needs improvement. Focus on medium and high-severity issues.');
-  } else {
-    recommendations.push('Good compliance posture. Maintain current controls and continue monitoring.');
-  }
-
-  recommendations.push('Schedule regular compliance training for all staff members.');
-  recommendations.push('Implement continuous monitoring and automated alerting.');
-  recommendations.push('Review and update security policies quarterly.');
-  recommendations.push('Conduct regular penetration testing and vulnerability assessments.');
-
-  return recommendations.slice(0, 10);
-}
 
 export default router;

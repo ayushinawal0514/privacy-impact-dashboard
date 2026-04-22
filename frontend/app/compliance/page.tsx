@@ -17,34 +17,55 @@ type RiskSummary = {
   low: number;
 };
 
+type RequirementScore = {
+  passed: number;
+  failed: number;
+  score: number;
+};
+
 type ComplianceApiData = {
-  complianceScore: number;
+  datasetId: string | null;
+  datasetName: string | null;
   hipaaCompliance: number;
   dpdpaCompliance: number;
-  risks: RiskSummary;
-  recommendations: string[];
-  summary: string;
-  latestUpload?: {
-    fileName?: string;
-    dataType?: string;
-    status?: string;
-    uploadedByUser?: {
-      name?: string;
-      email?: string;
-      role?: string;
-    };
-  } | null;
-  latestAnalysis?: {
-    createdAt?: string;
-  } | null;
+  overallScore: number;
+  passedRules: number;
+  failedRules: number;
+  totalRisks: number;
+  requirements: {
+    encryption: RequirementScore;
+    consent: RequirementScore;
+    accessControl: RequirementScore;
+    auditLogging: RequirementScore;
+    retention: RequirementScore;
+  };
+  lastUpdated: string | null;
 };
 
 type RiskItem = {
   _id?: string;
   severity: "critical" | "high" | "medium" | "low";
+  category?: string;
   riskCategory?: string;
   description?: string;
+  recommendation?: string;
+  ruleId?: string;
   status?: string;
+  datasetName?: string;
+  recordId?: string;
+};
+
+type RisksApiResponse = {
+  success: boolean;
+  role: string;
+  count: number;
+  summary: RiskSummary;
+  datasets: Array<{
+    datasetId?: string | null;
+    datasetName?: string | null;
+    count: number;
+  }>;
+  data: RiskItem[];
 };
 
 export default function ComplianceDashboard() {
@@ -54,6 +75,14 @@ export default function ComplianceDashboard() {
   const [loading, setLoading] = useState(true);
   const [complianceData, setComplianceData] = useState<ComplianceApiData | null>(null);
   const [risks, setRisks] = useState<RiskItem[]>([]);
+  const [riskSummary, setRiskSummary] = useState<RiskSummary>({
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+  });
+  const [datasets, setDatasets] = useState<Array<{ datasetId?: string | null; datasetName?: string | null; count: number }>>([]);
+  const [selectedDataset, setSelectedDataset] = useState("latest");
   const [error, setError] = useState<string | null>(null);
 
   const accessToken = (session as any)?.accessToken;
@@ -68,43 +97,55 @@ export default function ComplianceDashboard() {
     if (!session || !accessToken) return;
 
     setAuthToken(accessToken);
-    fetchComplianceData();
+    fetchComplianceData("latest");
 
-    const interval = setInterval(fetchComplianceData, 5 * 60 * 1000);
+    const interval = setInterval(() => fetchComplianceData(selectedDataset), 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [session, accessToken]);
 
-  async function fetchComplianceData() {
+  async function fetchComplianceData(datasetName = selectedDataset) {
     try {
       setLoading(true);
       setError(null);
 
-      const [summaryRes, risksRes] = await Promise.all([
-        apiMethods.getDashboardSummary(),
-        apiMethods.getRisks(),
-      ]);
+      const complianceRes =
+        datasetName && datasetName !== "latest"
+          ? await apiMethods.getComplianceStatus(datasetName)
+          : await apiMethods.getComplianceStatus();
 
-      const summaryPayload = summaryRes.data?.data || {};
-      const risksPayload = risksRes.data?.data || [];
+      const risksRes = await apiMethods.getRisks();
 
-      const normalizedSummary: ComplianceApiData = {
-        complianceScore: summaryPayload.latestAnalysis?.complianceScore ?? 0,
-        hipaaCompliance: summaryPayload.latestAnalysis?.hipaaCompliance ?? 0,
-        dpdpaCompliance: summaryPayload.latestAnalysis?.dpdpaCompliance ?? 0,
-        risks: summaryPayload.risks || {
-          critical: 0,
-          high: 0,
-          medium: 0,
-          low: 0,
+      const compliancePayload = complianceRes.data?.data || null;
+      const risksPayload: RisksApiResponse = risksRes.data;
+
+      const allRisks = risksPayload?.data || [];
+      const allDatasets = risksPayload?.datasets || [];
+
+      const normalizedDatasetName =
+        datasetName && datasetName !== "latest" ? datasetName.trim() : null;
+
+      const filteredRisks = normalizedDatasetName
+        ? allRisks.filter(
+            (risk) => (risk.datasetName || "").trim() === normalizedDatasetName
+          )
+        : compliancePayload?.datasetName
+        ? allRisks.filter(
+            (risk) => (risk.datasetName || "").trim() === (compliancePayload.datasetName || "").trim()
+          )
+        : allRisks;
+
+      const computedRiskSummary = filteredRisks.reduce(
+        (acc, risk) => {
+          acc[risk.severity] += 1;
+          return acc;
         },
-        recommendations: summaryPayload.latestAnalysis?.recommendations || [],
-        summary: summaryPayload.latestAnalysis?.summary || "No compliance analysis available yet.",
-        latestUpload: summaryPayload.latestUpload || null,
-        latestAnalysis: summaryPayload.latestAnalysis || null,
-      };
+        { critical: 0, high: 0, medium: 0, low: 0 }
+      );
 
-      setComplianceData(normalizedSummary);
-      setRisks(risksPayload);
+      setComplianceData(compliancePayload);
+      setRisks(filteredRisks);
+      setRiskSummary(computedRiskSummary);
+      setDatasets(allDatasets);
     } catch (err: any) {
       console.error("Error fetching compliance data:", err);
       setError(err?.response?.data?.message || "Failed to load compliance data.");
@@ -114,54 +155,63 @@ export default function ComplianceDashboard() {
   }
 
   const requirementRows = useMemo(() => {
-    const hipaa = complianceData?.hipaaCompliance ?? 0;
-    const dpdp = complianceData?.dpdpaCompliance ?? 0;
+    if (!complianceData) return [];
 
     return [
       {
         name: "Data Encryption",
-        percentage: hipaa,
-        status: hipaa >= 75 ? "compliant" : "pending",
-      },
-      {
-        name: "Access Controls",
-        percentage: hipaa,
-        status: hipaa >= 60 ? "compliant" : "pending",
-      },
-      {
-        name: "Audit Logging",
-        percentage: hipaa,
-        status: hipaa >= 60 ? "compliant" : "pending",
+        percentage: complianceData.requirements?.encryption?.score ?? 0,
+        status:
+          (complianceData.requirements?.encryption?.score ?? 0) >= 75
+            ? "compliant"
+            : "pending",
       },
       {
         name: "Consent Management",
-        percentage: dpdp,
-        status: dpdp >= 75 ? "compliant" : "pending",
+        percentage: complianceData.requirements?.consent?.score ?? 0,
+        status:
+          (complianceData.requirements?.consent?.score ?? 0) >= 75
+            ? "compliant"
+            : "pending",
+      },
+      {
+        name: "Access Control",
+        percentage: complianceData.requirements?.accessControl?.score ?? 0,
+        status:
+          (complianceData.requirements?.accessControl?.score ?? 0) >= 75
+            ? "compliant"
+            : "pending",
+      },
+      {
+        name: "Audit Logging",
+        percentage: complianceData.requirements?.auditLogging?.score ?? 0,
+        status:
+          (complianceData.requirements?.auditLogging?.score ?? 0) >= 75
+            ? "compliant"
+            : "pending",
       },
       {
         name: "Data Retention",
-        percentage: dpdp,
-        status: dpdp >= 60 ? "compliant" : "pending",
+        percentage: complianceData.requirements?.retention?.score ?? 0,
+        status:
+          (complianceData.requirements?.retention?.score ?? 0) >= 75
+            ? "compliant"
+            : "pending",
       },
     ];
   }, [complianceData]);
 
   const activeViolations = useMemo(() => {
     if (!complianceData) return 0;
-    return (
-      (complianceData.risks?.critical || 0) +
-      (complianceData.risks?.high || 0) +
-      (complianceData.risks?.medium || 0)
-    );
+    return complianceData.totalRisks || 0;
   }, [complianceData]);
 
   const systemsAudited = useMemo(() => {
-    if (!complianceData?.latestUpload?.fileName) return 0;
-    return 1;
+    return complianceData?.datasetName ? 1 : 0;
   }, [complianceData]);
 
   const lastAuditLabel = useMemo(() => {
-    const createdAt = complianceData?.latestAnalysis?.createdAt;
+    const createdAt = complianceData?.lastUpdated;
     if (!createdAt) return "N/A";
 
     const then = new Date(createdAt).getTime();
@@ -176,8 +226,36 @@ export default function ComplianceDashboard() {
   }, [complianceData]);
 
   const nextReviewLabel = useMemo(() => {
-    return activeViolations > 10 ? "Immediate review suggested" : "In 7 days";
+    return activeViolations > 5 ? "Immediate review suggested" : "In 7 days";
   }, [activeViolations]);
+
+  const recommendations = useMemo(() => {
+    if (!complianceData) return [];
+
+    const recs: string[] = [];
+
+    if ((complianceData.requirements?.encryption?.score ?? 0) < 100) {
+      recs.push("Enable encryption for all stored healthcare records.");
+    }
+    if ((complianceData.requirements?.consent?.score ?? 0) < 100) {
+      recs.push("Obtain and track explicit consent for all patient records.");
+    }
+    if ((complianceData.requirements?.accessControl?.score ?? 0) < 100) {
+      recs.push("Restrict access to approved healthcare roles only.");
+    }
+    if ((complianceData.requirements?.auditLogging?.score ?? 0) < 100) {
+      recs.push("Enable audit logging to maintain traceability.");
+    }
+    if ((complianceData.requirements?.retention?.score ?? 0) < 100) {
+      recs.push("Review and reduce retention periods according to policy.");
+    }
+
+    if (recs.length === 0) {
+      recs.push("Current dataset satisfies all monitored compliance checks.");
+    }
+
+    return recs;
+  }, [complianceData]);
 
   if (status === "loading" || loading) {
     return (
@@ -196,19 +274,20 @@ export default function ComplianceDashboard() {
 
   return (
     <EnhancedDashboardLayout activeSection="compliance" userRole={session?.user?.role}>
-      <div className="flex items-center justify-between mb-4">
-  <button
-    onClick={() => router.push("/dashboard")}
-    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-  >
-    ← Back to Dashboard
-  </button>
-</div>
       <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => router.push("/dashboard/admin")}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            ← Back to Dashboard
+          </button>
+        </div>
+
         <div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Compliance Dashboard</h1>
           <p className="text-slate-600">
-            Monitor HIPAA and DPDPA compliance status across your healthcare systems
+            Monitor HIPAA and DPDPA compliance status across uploaded healthcare datasets
           </p>
         </div>
 
@@ -217,6 +296,45 @@ export default function ComplianceDashboard() {
             {error}
           </div>
         )}
+
+        <div className="bg-white rounded-lg border shadow-sm p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+              <label className="block text-sm text-slate-600 mb-2">Dataset</label>
+              <select
+                value={selectedDataset}
+                onChange={async (e) => {
+                  const value = e.target.value;
+                  setSelectedDataset(value);
+                  await fetchComplianceData(value);
+                }}
+                className="w-full border rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="latest">Latest Dataset</option>
+                {datasets
+                  .filter((d) => d.datasetName)
+                  .map((dataset) => (
+                    <option
+                      key={dataset.datasetId || dataset.datasetName || Math.random()}
+                      value={(dataset.datasetName || "").trim()}
+                    >
+                      {(dataset.datasetName || "").trim()} ({dataset.count} risk(s))
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="text-sm text-slate-600">
+              <p className="font-medium text-slate-900">Current Dataset</p>
+              <p>{complianceData?.datasetName?.trim() || "N/A"}</p>
+            </div>
+
+            <div className="text-sm text-slate-600">
+              <p className="font-medium text-slate-900">Last Updated</p>
+              <p>{lastAuditLabel}</p>
+            </div>
+          </div>
+        </div>
 
         {/* Compliance Score Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -227,7 +345,6 @@ export default function ComplianceDashboard() {
             </div>
             <ComplianceScoreChart score={complianceData?.hipaaCompliance || 0} />
           </div>
-          
 
           <div className="bg-white rounded-lg border shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
@@ -242,7 +359,7 @@ export default function ComplianceDashboard() {
               <h3 className="font-semibold text-slate-900">Overall Compliance</h3>
               <span className="text-2xl">✓</span>
             </div>
-            <ComplianceScoreChart score={complianceData?.complianceScore || 0} />
+            <ComplianceScoreChart score={complianceData?.overallScore || 0} />
           </div>
         </div>
 
@@ -276,7 +393,7 @@ export default function ComplianceDashboard() {
             <h3 className="font-semibold text-slate-900 mb-4">Key Metrics</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-4 border-b">
-                <span className="text-sm text-slate-600">Active Violations</span>
+                <span className="text-sm text-slate-600">Total Risks in Dataset</span>
                 <span className="text-2xl font-bold text-red-600">{activeViolations}</span>
               </div>
               <div className="flex items-center justify-between pb-4 border-b">
@@ -284,8 +401,16 @@ export default function ComplianceDashboard() {
                 <span className="text-2xl font-bold text-blue-600">{systemsAudited}</span>
               </div>
               <div className="flex items-center justify-between pb-4 border-b">
-                <span className="text-sm text-slate-600">Last Audit</span>
-                <span className="text-sm font-medium text-slate-600">{lastAuditLabel}</span>
+                <span className="text-sm text-slate-600">Passed Rules</span>
+                <span className="text-2xl font-bold text-green-600">
+                  {complianceData?.passedRules || 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between pb-4 border-b">
+                <span className="text-sm text-slate-600">Failed Rules</span>
+                <span className="text-2xl font-bold text-orange-600">
+                  {complianceData?.failedRules || 0}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-600">Next Review</span>
@@ -295,7 +420,7 @@ export default function ComplianceDashboard() {
           </div>
         </div>
 
-        {/* Risk Distribution and Timeline */}
+        {/* Risk Distribution and Current Summary */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-lg border shadow-sm p-6">
             <h3 className="font-semibold text-slate-900 mb-4">Risk Distribution</h3>
@@ -303,15 +428,36 @@ export default function ComplianceDashboard() {
           </div>
 
           <div className="bg-white rounded-lg border shadow-sm p-6">
-            <h3 className="font-semibold text-slate-900 mb-4">Compliance Trends (Current)</h3>
-            <div className="text-center text-slate-600 py-12">
+            <h3 className="font-semibold text-slate-900 mb-4">Compliance Summary</h3>
+            <div className="text-slate-600 space-y-3">
               <p>
                 Current overall score:{" "}
                 <span className="font-semibold text-slate-900">
-                  {complianceData?.complianceScore || 0}%
+                  {complianceData?.overallScore || 0}%
                 </span>
               </p>
-              <p className="text-sm mt-2">{complianceData?.summary || "No trend data available."}</p>
+              <p>
+                HIPAA compliance is{" "}
+                <span className="font-semibold text-slate-900">
+                  {complianceData?.hipaaCompliance || 0}%
+                </span>
+                , and DPDPA compliance is{" "}
+                <span className="font-semibold text-slate-900">
+                  {complianceData?.dpdpaCompliance || 0}%
+                </span>
+                .
+              </p>
+              <p>
+                Dataset{" "}
+                <span className="font-semibold text-slate-900">
+                  {complianceData?.datasetName?.trim() || "N/A"}
+                </span>{" "}
+                produced{" "}
+                <span className="font-semibold text-slate-900">
+                  {complianceData?.totalRisks || 0}
+                </span>{" "}
+                detected risk(s).
+              </p>
             </div>
           </div>
         </div>
@@ -319,9 +465,9 @@ export default function ComplianceDashboard() {
         {/* Recommendations */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h3 className="font-semibold text-blue-900 mb-4">📣 Recommendations</h3>
-          {complianceData?.recommendations?.length ? (
+          {recommendations.length ? (
             <ul className="space-y-2 list-disc list-inside text-blue-800">
-              {complianceData.recommendations.map((rec, i) => (
+              {recommendations.map((rec, i) => (
                 <li key={i}>{rec}</li>
               ))}
             </ul>

@@ -7,10 +7,10 @@ import { useEffect, useMemo, useState } from "react";
 import { setAuthToken } from "@/lib/api-client";
 
 interface UploadUser {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
+  id?: string;
+  email?: string;
+  name?: string;
+  role?: string;
 }
 
 interface UploadItem {
@@ -24,27 +24,34 @@ interface UploadItem {
   uploadedByUser?: UploadUser | null;
 }
 
-interface AnalysisResult {
-  _id: string;
-  complianceScore: number;
-  hipaaCompliance: number;
-  dpdpaCompliance: number;
-  ruleResults: Array<{
-    ruleId: string;
-    ruleName: string;
-    severity: "critical" | "high" | "medium" | "low";
-    passed: boolean | null;
-    details: string;
-    riskCount: number;
-  }>;
-  anomalies: Array<{
-    type: string;
-    severity: "critical" | "high" | "medium" | "low";
-    description: string;
-  }>;
-  recommendations: string[];
-  summary: string;
-  createdAt: string;
+interface LatestAnalysis {
+  _id?: string;
+  datasetId?: string;
+  datasetName?: string;
+  dataType?: string;
+  createdAt?: string;
+  summary?: {
+    totalRecords: number;
+    totalRisks: number;
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  compliance?: {
+    hipaaScore: number;
+    dpdpaScore: number;
+    overallScore: number;
+    passedRules: number;
+    failedRules: number;
+    requirements?: {
+      encryption?: { passed: number; failed: number; score: number };
+      consent?: { passed: number; failed: number; score: number };
+      accessControl?: { passed: number; failed: number; score: number };
+      auditLogging?: { passed: number; failed: number; score: number };
+      retention?: { passed: number; failed: number; score: number };
+    };
+  };
 }
 
 interface DashboardData {
@@ -58,14 +65,10 @@ interface DashboardData {
   hipaaCompliance: number;
   dpdpaCompliance: number;
   pendingAlerts: number;
-  recommendations: string[];
-  summary: string;
   latestUpload: UploadItem | null;
-  latestAnalysis: AnalysisResult | null;
+  latestAnalysis: LatestAnalysis | null;
   totalUploads: number;
   recentUploads: UploadItem[];
-  failedRules: AnalysisResult["ruleResults"];
-  anomalies: AnalysisResult["anomalies"];
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
@@ -120,24 +123,20 @@ export default function AdminDashboardPage() {
           throw new Error(summaryJson.message || "Failed to fetch dashboard summary");
         }
 
-        const summary = summaryJson.data;
-        const analysis: AnalysisResult | null = summary.latestAnalysis || null;
-        const failedRules = (analysis?.ruleResults || []).filter((r) => r.passed === false);
+        const summary = summaryJson.data || {};
+        const latestAnalysis: LatestAnalysis | null = summary.latestAnalysis || null;
+        const latestCompliance = latestAnalysis?.compliance || null;
 
         setData({
           risks: summary.risks || { critical: 0, high: 0, medium: 0, low: 0 },
-          complianceScore: analysis?.complianceScore || 0,
-          hipaaCompliance: analysis?.hipaaCompliance || 0,
-          dpdpaCompliance: analysis?.dpdpaCompliance || 0,
+          complianceScore: latestCompliance?.overallScore || 0,
+          hipaaCompliance: latestCompliance?.hipaaScore || 0,
+          dpdpaCompliance: latestCompliance?.dpdpaScore || 0,
           pendingAlerts: (summary.risks?.critical || 0) + (summary.risks?.high || 0),
-          recommendations: analysis?.recommendations || [],
-          summary: analysis?.summary || "No summary available.",
           latestUpload: summary.latestUpload || null,
-          latestAnalysis: analysis,
+          latestAnalysis,
           totalUploads: summary.totalUploads || 0,
           recentUploads: summary.recentUploads || [],
-          failedRules,
-          anomalies: analysis?.anomalies || [],
         });
       } catch (err: any) {
         console.error("Failed to fetch admin dashboard data:", err);
@@ -154,15 +153,16 @@ export default function AdminDashboardPage() {
 
   const complianceStatus = useMemo(() => {
     if (!data) return "Unknown";
-    if (data.complianceScore >= 80) return "✓ Strong";
-    if (data.complianceScore >= 60) return "⚠ Moderate";
-    return "✗ Weak";
+    if (data.complianceScore >= 80) return "Strong";
+    if (data.complianceScore >= 60) return "Moderate";
+    return "Weak";
   }, [data]);
 
   const riskLevel = useMemo(() => {
     if (!data) return "Low";
     if (data.risks.critical > 0) return "Critical";
     if (data.risks.high > 0) return "High";
+    if (data.risks.medium > 0) return "Medium";
     return "Low";
   }, [data]);
 
@@ -179,14 +179,19 @@ export default function AdminDashboardPage() {
 
   if (!session || session.user.role !== "admin") return null;
 
+  const latestSummary = data?.latestAnalysis?.summary;
+  const latestRequirements = data?.latestAnalysis?.compliance?.requirements;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-blue-900">
       <header className="bg-black/30 backdrop-blur border-b border-white/10 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
-              <p className="text-sm text-gray-400">Organization-wide privacy and compliance monitoring</p>
+              <h1 className="text-2xl font-bold text-white">Privacy Impact Dashboard</h1>
+              <p className="text-sm text-gray-400">
+                Monitor privacy risks, compliance status, and data activity across healthcare systems
+              </p>
             </div>
             <div className="flex items-center gap-6">
               <div className="text-right">
@@ -216,15 +221,15 @@ export default function AdminDashboardPage() {
           <h2 className="text-xl font-bold text-white mb-4">Organization Metrics</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-6">
             <MetricCard
-              title="Compliance Score"
+              title="Overall Compliance Score"
               value={`${data?.complianceScore || 0}%`}
               badge={complianceStatus}
-              tone="emerald"
+              tone="blue"
               progress={data?.complianceScore || 0}
             />
             <MetricCard
               title="Active Risks"
-              value={`${(data?.risks.critical || 0) + (data?.risks.high || 0) + (data?.risks.medium || 0)}`}
+              value={`${(data?.risks.critical || 0) + (data?.risks.high || 0) + (data?.risks.medium || 0) + (data?.risks.low || 0)}`}
               badge={riskLevel}
               tone="red"
               subtitle={`Critical: ${data?.risks.critical || 0} • High: ${data?.risks.high || 0}`}
@@ -236,9 +241,9 @@ export default function AdminDashboardPage() {
               progress={data?.hipaaCompliance || 0}
             />
             <MetricCard
-              title="DPDP Compliance"
+              title="DPDPA Compliance"
               value={`${data?.dpdpaCompliance || 0}%`}
-              tone="indigo"
+              tone="blue"
               progress={data?.dpdpaCompliance || 0}
             />
             <MetricCard
@@ -254,33 +259,29 @@ export default function AdminDashboardPage() {
           <div className="lg:col-span-2 bg-gradient-to-br from-white/15 to-white/5 backdrop-blur border border-white/30 rounded-lg p-6 shadow-lg">
             <h3 className="text-xl font-bold text-white mb-4">Quick Actions</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <ActionLink href="/compliance" label="View Compliance" tone="cyan" />
-              <ActionLink href="/upload" label="Upload Data" tone="purple" />
-              <ActionLink href="/audit-reports" label="Generate Report" tone="pink" />
-              <ActionLink href="/risks" label="View Risks" tone="green" />
+              <ActionLink href="/upload" label="Upload Data" primary />
+              <ActionLink href="/risks" label="View Risks" />
+              <ActionLink href="/compliance" label="View Compliance" />
+              <ActionLink href="/audit-reports" label="Generate Report" />
             </div>
           </div>
 
           <div className="bg-gradient-to-br from-white/15 to-white/5 backdrop-blur border border-white/30 rounded-lg p-6 shadow-lg">
             <h3 className="text-xl font-bold text-white mb-4">Latest Analysis</h3>
-            <InfoBox label="File" value={data?.latestUpload?.fileName || "N/A"} />
+            <InfoBox label="Dataset" value={data?.latestUpload?.fileName || "N/A"} />
             <InfoBox label="Type" value={data?.latestUpload?.dataType || "N/A"} />
-            <InfoBox
-              label="Uploaded By"
-              value={
-                data?.latestUpload?.uploadedByUser
-                  ? `${data.latestUpload.uploadedByUser.name} (${data.latestUpload.uploadedByUser.email})`
-                  : "Unknown"
-              }
-            />
             <InfoBox
               label="Status"
               value={data?.latestUpload?.status || "N/A"}
               valueClassName="text-green-400 font-semibold"
             />
             <InfoBox
-              label="Pending Alerts"
-              value={`${data?.pendingAlerts || 0}`}
+              label="Records"
+              value={`${latestSummary?.totalRecords ?? data?.latestUpload?.recordCount ?? 0}`}
+            />
+            <InfoBox
+              label="Total Risks"
+              value={`${latestSummary?.totalRisks ?? 0}`}
               valueClassName="text-orange-300 font-semibold"
             />
           </div>
@@ -305,12 +306,10 @@ export default function AdminDashboardPage() {
                     </div>
 
                     <div className="text-sm text-right">
-                      <p className="text-cyan-300">
-                        {upload.uploadedByUser
-                          ? `${upload.uploadedByUser.name} (${upload.uploadedByUser.email})`
-                          : "Unknown uploader"}
-                      </p>
                       <p className="text-gray-400 capitalize">{upload.status}</p>
+                      <p className="text-gray-400">
+                        {upload.uploadedAt ? new Date(upload.uploadedAt).toLocaleString() : ""}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -343,43 +342,33 @@ export default function AdminDashboardPage() {
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Panel title="Recommendations">
-            {data?.recommendations?.length ? (
-              <ul className="space-y-3">
-                {data.recommendations.map((rec, index) => (
-                  <li key={index} className="text-gray-200 text-sm leading-relaxed bg-white/5 border border-white/10 rounded-lg p-3">
-                    {rec}
-                  </li>
-                ))}
-              </ul>
+          <Panel title="Latest Compliance Breakdown">
+            {latestRequirements ? (
+              <div className="space-y-3">
+                <RequirementRow label="Encryption" score={latestRequirements.encryption?.score ?? 0} />
+                <RequirementRow label="Consent" score={latestRequirements.consent?.score ?? 0} />
+                <RequirementRow label="Access Control" score={latestRequirements.accessControl?.score ?? 0} />
+                <RequirementRow label="Audit Logging" score={latestRequirements.auditLogging?.score ?? 0} />
+                <RequirementRow label="Retention" score={latestRequirements.retention?.score ?? 0} />
+              </div>
             ) : (
-              <p className="text-gray-300">No recommendations available.</p>
+              <p className="text-gray-300">No compliance breakdown available.</p>
             )}
           </Panel>
 
-          <Panel title="Analysis Summary">
-            <p className="text-gray-200 leading-relaxed">{data?.summary || "No summary available."}</p>
-
-            <div className="mt-6">
-              <h4 className="text-lg font-semibold text-white mb-3">Failed Rules</h4>
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                {data?.failedRules?.length ? (
-                  data.failedRules.map((rule) => (
-                    <div key={rule.ruleId} className="bg-white/5 border border-white/10 rounded-lg p-3">
-                      <div className="flex justify-between gap-3">
-                        <p className="text-white font-medium text-sm">{rule.ruleName}</p>
-                        <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-200 capitalize whitespace-nowrap">
-                          {rule.severity}
-                        </span>
-                      </div>
-                      <p className="text-gray-300 text-xs mt-2">{rule.details}</p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-300 text-sm">No failed rules found.</p>
-                )}
+          <Panel title="Latest Analysis Summary">
+            {latestSummary ? (
+              <div className="space-y-3 text-gray-200">
+                <p>Total Records: {latestSummary.totalRecords}</p>
+                <p>Total Risks: {latestSummary.totalRisks}</p>
+                <p>Critical Risks: {latestSummary.critical}</p>
+                <p>High Risks: {latestSummary.high}</p>
+                <p>Medium Risks: {latestSummary.medium}</p>
+                <p>Low Risks: {latestSummary.low}</p>
               </div>
-            </div>
+            ) : (
+              <p className="text-gray-300">No summary available.</p>
+            )}
           </Panel>
         </section>
       </main>
@@ -398,34 +387,22 @@ function MetricCard({
   title: string;
   value: string;
   badge?: string;
-  tone: "emerald" | "red" | "blue" | "indigo";
+  tone: "blue" | "red";
   progress?: number;
   subtitle?: string;
 }) {
   const toneMap = {
-    emerald: {
-      box: "from-emerald-500/20 to-emerald-500/10 border-emerald-500/30",
-      text: "text-emerald-400",
-      bg: "bg-emerald-500",
-      badge: "bg-emerald-500/30 text-emerald-200",
-    },
-    red: {
-      box: "from-red-500/20 to-red-500/10 border-red-500/30",
-      text: "text-red-400",
-      bg: "bg-red-500",
-      badge: "bg-red-500/30 text-red-200",
-    },
     blue: {
       box: "from-blue-500/20 to-blue-500/10 border-blue-500/30",
       text: "text-blue-400",
       bg: "bg-blue-500",
       badge: "bg-blue-500/30 text-blue-200",
     },
-    indigo: {
-      box: "from-indigo-500/20 to-indigo-500/10 border-indigo-500/30",
-      text: "text-indigo-400",
-      bg: "bg-indigo-500",
-      badge: "bg-indigo-500/30 text-indigo-200",
+    red: {
+      box: "from-red-500/20 to-red-500/10 border-red-500/30",
+      text: "text-red-400",
+      bg: "bg-red-500",
+      badge: "bg-red-500/30 text-red-200",
     },
   };
 
@@ -451,23 +428,20 @@ function MetricCard({
 function ActionLink({
   href,
   label,
-  tone,
+  primary = false,
 }: {
   href: string;
   label: string;
-  tone: "cyan" | "purple" | "pink" | "green";
+  primary?: boolean;
 }) {
-  const toneMap = {
-    cyan: "from-cyan-500/20 to-cyan-500/10 border-cyan-500/30 text-cyan-200 hover:from-cyan-500/30 hover:to-cyan-500/20",
-    purple: "from-purple-500/20 to-purple-500/10 border-purple-500/30 text-purple-200 hover:from-purple-500/30 hover:to-purple-500/20",
-    pink: "from-pink-500/20 to-pink-500/10 border-pink-500/30 text-pink-200 hover:from-pink-500/30 hover:to-pink-500/20",
-    green: "from-green-500/20 to-green-500/10 border-green-500/30 text-green-200 hover:from-green-500/30 hover:to-green-500/20",
-  };
-
   return (
     <Link
       href={href}
-      className={`p-4 bg-gradient-to-r border rounded-lg transition font-medium flex items-center justify-between group ${toneMap[tone]}`}
+      className={`p-4 border rounded-lg transition font-medium flex items-center justify-between group ${
+        primary
+          ? "bg-blue-600 border-blue-500 text-white hover:bg-blue-700"
+          : "bg-white/10 border-white/20 text-gray-200 hover:bg-white/20"
+      }`}
     >
       <span>{label}</span>
       <span className="group-hover:translate-x-1 transition">→</span>
@@ -531,5 +505,25 @@ function RiskRow({
         <span className="text-xs px-2 py-1 bg-white/10 text-gray-200 rounded-full">{badge}</span>
       </td>
     </tr>
+  );
+}
+
+function RequirementRow({
+  label,
+  score,
+}: {
+  label: string;
+  score: number;
+}) {
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-white text-sm">{label}</span>
+        <span className="text-cyan-300 font-semibold">{score}%</span>
+      </div>
+      <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+        <div className="bg-cyan-500 h-full transition-all duration-500" style={{ width: `${score}%` }} />
+      </div>
+    </div>
   );
 }

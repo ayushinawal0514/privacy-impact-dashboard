@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 import { AuthRequest, roleMiddleware } from '../middleware/middlewares';
 import { getDB } from '../config/database';
 import logger from '../config/logger';
+import { logAccess } from '../services/accessLogger'; // ✅ ADD
 
 const router = Router();
 
@@ -28,19 +29,96 @@ function getRiskFilter(req: AuthRequest) {
 router.get('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
-    const filter = getRiskFilter(req);
+    const baseFilter = getRiskFilter(req);
+
+    const {
+      severity,
+      status,
+      datasetId,
+      datasetName,
+      dataType,
+      skip = 0,
+      limit = 200
+    } = req.query;
+
+    const filter: any = { ...baseFilter };
+
+    if (severity && typeof severity === 'string' && severity !== 'all') {
+      filter.severity = severity;
+    }
+
+    if (status && typeof status === 'string' && status !== 'all') {
+      filter.status = status;
+    }
+
+    if (dataType && typeof dataType === 'string' && dataType !== 'all') {
+      filter.dataType = dataType;
+    }
+
+    if (datasetName && typeof datasetName === 'string') {
+      filter.datasetName = datasetName.trim();
+    }
+
+    if (datasetId && typeof datasetId === 'string' && ObjectId.isValid(datasetId)) {
+      filter.datasetId = new ObjectId(datasetId);
+    }
 
     const risks = await db.collection('privacy_risks')
       .find(filter)
-      .sort({ severity: -1, createdAt: -1 })
+      .sort({ createdAt: -1 })
+      .skip(Number(skip))
+      .limit(Number(limit))
       .toArray();
+
+    const total = await db.collection('privacy_risks').countDocuments(filter);
+
+    const summary = {
+      critical: await db.collection('privacy_risks').countDocuments({ ...filter, severity: 'critical' }),
+      high: await db.collection('privacy_risks').countDocuments({ ...filter, severity: 'high' }),
+      medium: await db.collection('privacy_risks').countDocuments({ ...filter, severity: 'medium' }),
+      low: await db.collection('privacy_risks').countDocuments({ ...filter, severity: 'low' }),
+    };
+
+    const datasetOptions = await db.collection('privacy_risks').aggregate([
+      { $match: baseFilter },
+      {
+        $group: {
+          _id: '$datasetName',
+          datasetId: { $first: '$datasetId' },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]).toArray();
+
+    // ✅ LOG ACCESS (READ LIST)
+    await logAccess({
+      userId: req.userId!,
+      organizationId: req.user!.organizationId,
+      action: "read",
+      dataType: typeof dataType === 'string' ? dataType : 'health',
+      datasetId: typeof datasetId === 'string' ? datasetId : undefined,
+      datasetName: typeof datasetName === 'string' ? datasetName.trim() : undefined,
+      resourceId: "risks:list",
+      status: "success",
+      loggedBy: req.userId!,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') || undefined
+    });
 
     return res.json({
       success: true,
       role: req.role,
-      count: risks.length,
+      count: total,
+      summary,
+      datasets: datasetOptions.map((d: any) => ({
+        datasetId: d.datasetId,
+        datasetName: d._id,
+        count: d.count
+      })),
       data: risks
     });
+
   } catch (error) {
     logger.error('Error fetching risks:', error);
     return res.status(500).json({
@@ -60,6 +138,13 @@ router.get('/:id', roleMiddleware(['admin', 'user']), async (req: AuthRequest, r
     const db = getDB();
     const { id } = req.params;
 
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid risk id'
+      });
+    }
+
     const filter = {
       _id: new ObjectId(id),
       ...getRiskFilter(req)
@@ -74,7 +159,24 @@ router.get('/:id', roleMiddleware(['admin', 'user']), async (req: AuthRequest, r
       });
     }
 
+    // ✅ LOG ACCESS (READ SINGLE)
+    await logAccess({
+      userId: req.userId!,
+      organizationId: req.user!.organizationId,
+      action: "read",
+      dataType: risk.dataType || 'health',
+      datasetId: risk.datasetId?.toString?.(),
+      datasetName: risk.datasetName,
+      recordId: risk.recordId,
+      resourceId: `risk:${id}`,
+      status: "success",
+      loggedBy: req.userId!,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') || undefined
+    });
+
     return res.json({ success: true, data: risk });
+
   } catch (error) {
     logger.error('Error fetching risk:', error);
     return res.status(500).json({
@@ -92,14 +194,19 @@ router.get('/:id', roleMiddleware(['admin', 'user']), async (req: AuthRequest, r
 router.post('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
-    const { dataType, severity, description, affectedUsers, mitigationPlan } = req.body;
-
-    const newRisk = {
+    const {
       dataType,
       severity,
       description,
-      affectedUsers,
-      mitigationPlan,
+      datasetId,
+      datasetName,
+      recordId
+    } = req.body;
+
+    const newRisk: any = {
+      dataType,
+      severity,
+      description,
       organizationId: req.user!.organizationId,
       createdBy: req.userId,
       createdAt: new Date(),
@@ -107,12 +214,36 @@ router.post('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res
       status: 'open'
     };
 
+    if (datasetId && ObjectId.isValid(datasetId)) {
+      newRisk.datasetId = new ObjectId(datasetId);
+    }
+
+    if (datasetName) newRisk.datasetName = datasetName.trim();
+    if (recordId) newRisk.recordId = recordId;
+
     const result = await db.collection('privacy_risks').insertOne(newRisk);
+
+    // ✅ LOG CREATE
+    await logAccess({
+      userId: req.userId!,
+      organizationId: req.user!.organizationId,
+      action: "write",
+      dataType,
+      datasetId,
+      datasetName,
+      recordId,
+      resourceId: `risk:${result.insertedId}`,
+      status: "success",
+      loggedBy: req.userId!,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') || undefined
+    });
 
     return res.status(201).json({
       success: true,
       data: { _id: result.insertedId, ...newRisk }
     });
+
   } catch (error) {
     logger.error('Error creating risk:', error);
     return res.status(500).json({
@@ -139,72 +270,71 @@ router.put('/:id', roleMiddleware(['admin', 'user']), async (req: AuthRequest, r
 
     const updated = await db.collection('privacy_risks').findOneAndUpdate(
       filter,
-      {
-        $set: {
-          ...req.body,
-          updatedAt: new Date(),
-          updatedBy: req.userId
-        }
-      },
+      { $set: { ...req.body, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
 
-    if (!updated || !updated.value) {
-      return res.status(404).json({
-        success: false,
-        message: 'Risk not found or access denied'
-      });
+    const updatedDoc = (updated as any)?.value ?? updated;
+
+    if (!updatedDoc) {
+      return res.status(404).json({ success: false });
     }
 
-    return res.json({
-      success: true,
-      data: updated.value
+    // ✅ LOG UPDATE
+    await logAccess({
+      userId: req.userId!,
+      organizationId: req.user!.organizationId,
+      action: "update",
+      dataType: updatedDoc.dataType,
+      datasetId: updatedDoc.datasetId?.toString?.(),
+      datasetName: updatedDoc.datasetName,
+      recordId: updatedDoc.recordId,
+      resourceId: `risk:${id}`,
+      status: "success"
     });
+
+    return res.json({ success: true, data: updatedDoc });
+
   } catch (error) {
     logger.error('Error updating risk:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to update risk'
-    });
+    return res.status(500).json({ success: false });
   }
 });
 
 /**
  * ============================
- * Delete risk (ADMIN ONLY)
+ * Delete risk
  * ============================
  */
-router.delete('/:id',
-  roleMiddleware(['admin']),   // 🔥 only admin can delete
-  async (req: AuthRequest, res: Response) => {
-    try {
-      const db = getDB();
-      const { id } = req.params;
+router.delete('/:id', roleMiddleware(['admin']), async (req: AuthRequest, res: Response) => {
+  try {
+    const db = getDB();
+    const { id } = req.params;
 
-      const result = await db.collection('privacy_risks').deleteOne({
-        _id: new ObjectId(id),
-        organizationId: req.user!.organizationId
-      });
+    const result = await db.collection('privacy_risks').deleteOne({
+      _id: new ObjectId(id),
+      organizationId: req.user!.organizationId
+    });
 
-      if (result.deletedCount === 0) {
-        return res.status(404).json({
-          success: false,
-          message: 'Risk not found'
-        });
-      }
-
-      return res.json({
-        success: true,
-        message: 'Risk deleted successfully'
-      });
-    } catch (error) {
-      logger.error('Error deleting risk:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to delete risk'
-      });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false });
     }
+
+    // ✅ LOG DELETE
+    await logAccess({
+      userId: req.userId!,
+      organizationId: req.user!.organizationId,
+      action: "delete",
+      resourceId: `risk:${id}`,
+      status: "success"
+    });
+
+    return res.json({ success: true });
+
+  } catch (error) {
+    logger.error('Error deleting risk:', error);
+    return res.status(500).json({ success: false });
   }
-);
+});
 
 export default router;

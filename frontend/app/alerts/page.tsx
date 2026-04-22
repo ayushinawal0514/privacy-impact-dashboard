@@ -13,11 +13,38 @@ type AlertItem = {
   message?: string;
   severity?: "critical" | "high" | "medium" | "low";
   type?: string;
+  datasetId?: string;
+  datasetName?: string;
+  triggeredByRule?: string;
   affectedResources?: string[];
+  recommendation?: string;
   resolved?: boolean;
   createdAt?: string;
   resolvedAt?: string;
   resolutionNotes?: string;
+};
+
+type AlertDataset = {
+  datasetId?: string | null;
+  datasetName?: string | null;
+  count: number;
+};
+
+type AlertsApiResponse = {
+  success: boolean;
+  data: AlertItem[];
+  summary: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  datasets: AlertDataset[];
+  pagination: {
+    total: number;
+    limit: number;
+    skip: number;
+  };
 };
 
 export default function AlertsPage() {
@@ -26,10 +53,18 @@ export default function AlertsPage() {
 
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [datasets, setDatasets] = useState<AlertDataset[]>([]);
+  const [summary, setSummary] = useState({
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+  });
   const [error, setError] = useState<string | null>(null);
 
   const [severityFilter, setSeverityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [datasetFilter, setDatasetFilter] = useState("all");
   const [search, setSearch] = useState("");
 
   const accessToken = (session as any)?.accessToken;
@@ -52,8 +87,25 @@ export default function AlertsPage() {
       setError(null);
 
       const client = getApiClient();
-      const res = await client.get("/alerts");
-      setAlerts(res.data?.data || []);
+      const params: Record<string, any> = {};
+
+      if (severityFilter !== "all") params.severity = severityFilter;
+      if (statusFilter !== "all") params.resolved = statusFilter === "resolved";
+      if (datasetFilter !== "all") params.datasetName = datasetFilter;
+
+      const res = await client.get("/alerts", { params });
+      const payload: AlertsApiResponse = res.data;
+
+      setAlerts(payload.data || []);
+      setDatasets(payload.datasets || []);
+      setSummary(
+        payload.summary || {
+          critical: 0,
+          high: 0,
+          medium: 0,
+          low: 0,
+        }
+      );
     } catch (err: any) {
       console.error("Error fetching alerts:", err);
       setError(err?.response?.data?.message || "Failed to load alerts.");
@@ -76,33 +128,20 @@ export default function AlertsPage() {
 
   const filteredAlerts = useMemo(() => {
     return alerts.filter((alert) => {
-      const sev = (alert.severity || "low").toLowerCase();
-      const st = alert.resolved ? "resolved" : "open";
-
       const q = search.trim().toLowerCase();
+
       const matchesSearch =
         !q ||
         (alert.title || "").toLowerCase().includes(q) ||
         (alert.message || "").toLowerCase().includes(q) ||
-        (alert.type || "").toLowerCase().includes(q);
+        (alert.type || "").toLowerCase().includes(q) ||
+        (alert.datasetName || "").toLowerCase().includes(q) ||
+        (alert.triggeredByRule || "").toLowerCase().includes(q) ||
+        (alert.affectedResources || []).join(", ").toLowerCase().includes(q);
 
-      const matchesSeverity = severityFilter === "all" || sev === severityFilter;
-      const matchesStatus = statusFilter === "all" || st === statusFilter;
-
-      return matchesSearch && matchesSeverity && matchesStatus;
+      return matchesSearch;
     });
-  }, [alerts, search, severityFilter, statusFilter]);
-
-  const summary = useMemo(() => {
-    return alerts.reduce(
-      (acc, alert) => {
-        const sev = (alert.severity || "low").toLowerCase() as keyof typeof acc;
-        if (acc[sev] !== undefined) acc[sev] += 1;
-        return acc;
-      },
-      { critical: 0, high: 0, medium: 0, low: 0 }
-    );
-  }, [alerts]);
+  }, [alerts, search]);
 
   if (status === "loading" || loading) {
     return (
@@ -126,12 +165,12 @@ export default function AlertsPage() {
           <div>
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Alerts</h1>
             <p className="text-slate-600">
-              Monitor important privacy, compliance, and security events across the system
+              Automatically generated alerts based on detected privacy risks and compliance violations
             </p>
           </div>
 
           <Link
-            href="/dashboard"
+            href="/dashboard/admin"
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition w-fit"
           >
             ← Back to Dashboard
@@ -152,14 +191,32 @@ export default function AlertsPage() {
         </div>
 
         <div className="bg-white rounded-lg border shadow-sm p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <input
               type="text"
-              placeholder="Search alerts..."
+              placeholder="Search alerts, datasets, rules..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="border rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500"
             />
+
+            <select
+              value={datasetFilter}
+              onChange={(e) => setDatasetFilter(e.target.value)}
+              className="border rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Datasets</option>
+              {datasets
+                .filter((d) => d.datasetName)
+                .map((dataset) => (
+                  <option
+                    key={dataset.datasetId || dataset.datasetName || Math.random()}
+                    value={(dataset.datasetName || "").trim()}
+                  >
+                    {(dataset.datasetName || "").trim()} ({dataset.count})
+                  </option>
+                ))}
+            </select>
 
             <select
               value={severityFilter}
@@ -207,11 +264,12 @@ export default function AlertsPage() {
             <div className="divide-y">
               {filteredAlerts.map((alert) => {
                 const statusLabel = alert.resolved ? "resolved" : "open";
+                const affectedRecord = alert.affectedResources?.[0];
 
                 return (
                   <div key={alert._id} className="p-6 hover:bg-slate-50">
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <div className="flex flex-wrap items-center gap-2">
                           <SeverityBadge severity={alert.severity || "low"} />
                           <StatusBadge status={statusLabel} />
@@ -220,19 +278,46 @@ export default function AlertsPage() {
                               {alert.type}
                             </span>
                           )}
+                          {alert.datasetName && (
+                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                              {(alert.datasetName || "").trim()}
+                            </span>
+                          )}
                         </div>
 
                         <h3 className="text-lg font-semibold text-slate-900">
-                          {alert.title || "Security / Compliance Alert"}
+                          {alert.title || "Privacy / Compliance Alert"}
+                          {affectedRecord ? (
+                            <span className="text-slate-500 font-medium">
+                              {" "}— Record: {affectedRecord}
+                            </span>
+                          ) : null}
                         </h3>
 
                         <p className="text-slate-600">
                           {alert.message || "No description available."}
                         </p>
 
-                        {alert.affectedResources?.length ? (
-                          <p className="text-sm text-slate-500">
-                            Affected resources: {alert.affectedResources.join(", ")}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          <div className="text-slate-500">
+                            <span className="font-medium text-slate-700">Rule:</span>{" "}
+                            <code className="text-xs bg-slate-100 px-2 py-1 rounded">
+                              {alert.triggeredByRule || "N/A"}
+                            </code>
+                          </div>
+
+                          <div className="text-slate-500">
+                            <span className="font-medium text-slate-700">Affected resources:</span>{" "}
+                            {alert.affectedResources?.length
+                              ? alert.affectedResources.join(", ")
+                              : "N/A"}
+                          </div>
+                        </div>
+
+                        {alert.recommendation ? (
+                          <p className="text-sm text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                            <span className="font-medium">Recommendation:</span>{" "}
+                            {alert.recommendation}
                           </p>
                         ) : null}
 

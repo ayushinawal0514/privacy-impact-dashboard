@@ -148,15 +148,24 @@ export const apiMethods = {
     return client.get(apiEndpoints.reports.get(reportId));
   },
 
-  getRisks: async () => {
-    const client = getApiClient();
-    return client.get(apiEndpoints.risks.list);
-  },
+  getRisks: async (filters?: any) => {
+  const client = getApiClient();
+  return client.get(apiEndpoints.risks.list, {
+    params: filters,
+  });
+},
 
-  getComplianceStatus: async () => {
-    const client = getApiClient();
-    return client.get(apiEndpoints.compliance.status);
-  },
+  getComplianceStatus: async (datasetName?: string) => {
+  const client = getApiClient();
+
+  if (datasetName) {
+    return client.get(apiEndpoints.compliance.status, {
+      params: { datasetName },
+    });
+  }
+
+  return client.get(apiEndpoints.compliance.status);
+},
 
   getDashboardMetrics: async () => {
     const client = getApiClient();

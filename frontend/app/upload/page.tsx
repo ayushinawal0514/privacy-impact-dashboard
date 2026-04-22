@@ -8,6 +8,14 @@ import { apiMethods, setAuthToken } from "@/lib/api-client";
 
 type UploadStatus = "idle" | "uploading" | "success" | "error";
 
+function extractRecords(parsed: any): any[] {
+  if (Array.isArray(parsed)) return parsed;
+  if (Array.isArray(parsed?.records)) return parsed.records;
+  if (Array.isArray(parsed?.patients)) return parsed.patients;
+  if (Array.isArray(parsed?.users)) return parsed.users;
+  return [parsed];
+}
+
 export default function UploadPage() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -18,6 +26,21 @@ export default function UploadPage() {
   const [status, setStatus] = useState<UploadStatus>("idle");
   const [message, setMessage] = useState("");
   const [recordCount, setRecordCount] = useState<number | null>(null);
+
+  const [analysisSummary, setAnalysisSummary] = useState<{
+    totalRecords: number;
+    totalRisks: number;
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  } | null>(null);
+
+  const [complianceSummary, setComplianceSummary] = useState<{
+    hipaaScore: number;
+    dpdpaScore: number;
+    overallScore: number;
+  } | null>(null);
 
   const accessToken = (session as any)?.accessToken;
 
@@ -30,6 +53,11 @@ export default function UploadPage() {
     }
   }, [jsonData]);
 
+  const extractedPreviewRecords = useMemo(() => {
+    if (!parsedPreview) return [];
+    return extractRecords(parsedPreview);
+  }, [parsedPreview]);
+
   const isValidJson = jsonData.trim().length > 0 && parsedPreview !== null;
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,6 +69,10 @@ export default function UploadPage() {
     try {
       const text = await file.text();
       setJsonData(text);
+      setStatus("idle");
+      setMessage("");
+      setAnalysisSummary(null);
+      setComplianceSummary(null);
     } catch {
       setStatus("error");
       setMessage("Failed to read file.");
@@ -69,23 +101,36 @@ export default function UploadPage() {
     try {
       setStatus("uploading");
       setMessage("");
+      setAnalysisSummary(null);
+      setComplianceSummary(null);
 
       setAuthToken(accessToken);
 
       const parsed = JSON.parse(jsonData);
-      const records = Array.isArray(parsed) ? parsed : [parsed];
+      const records = extractRecords(parsed);
 
       const res = await apiMethods.uploadData(fileName, dataType, records);
 
       setRecordCount(records.length);
       setStatus("success");
-      setMessage(res.data?.message || "Upload successful.");
+      setMessage(res.data?.message || "Dataset analyzed successfully.");
+
+      setAnalysisSummary(res.data?.summary || null);
+      setComplianceSummary(
+        res.data?.compliance
+          ? {
+              hipaaScore: res.data.compliance.hipaaScore ?? 0,
+              dpdpaScore: res.data.compliance.dpdpaScore ?? 0,
+              overallScore: res.data.compliance.overallScore ?? 0,
+            }
+          : null
+      );
 
       setTimeout(() => {
         router.push(
           session?.user?.role === "admin" ? "/dashboard/admin" : "/dashboard/user"
         );
-      }, 1200);
+      }, 1800);
     } catch (err: any) {
       setStatus("error");
       setMessage(
@@ -99,9 +144,9 @@ export default function UploadPage() {
       <header className="bg-black/30 backdrop-blur border-b border-white/10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Upload Dataset</h1>
+            <h1 className="text-2xl font-bold">Privacy Data Ingestion & Analysis</h1>
             <p className="text-sm text-gray-300">
-              Add JSON healthcare records for privacy analysis
+              Upload healthcare data to automatically detect privacy risks and evaluate compliance
             </p>
           </div>
 
@@ -157,13 +202,24 @@ export default function UploadPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-300 mb-2">Paste JSON Data</label>
+                <label className="block text-sm text-gray-300 mb-2">
+                  Healthcare Dataset (JSON Input)
+                </label>
                 <textarea
-                  placeholder='Example: [{ "email": "patient@test.com", "encrypted": false }]'
+                  placeholder='Example: { "patients": [{ "patient_id": "P001", "encrypted": false }] }'
                   value={jsonData}
                   onChange={(e) => setJsonData(e.target.value)}
                   className="w-full min-h-[260px] rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white placeholder:text-gray-400 outline-none focus:border-cyan-400 resize-y"
                 />
+              </div>
+
+              <div className="rounded-xl bg-white/5 border border-white/10 p-4 text-sm text-gray-300">
+                <p className="font-medium text-white mb-2">System will analyze data for:</p>
+                <ul className="space-y-1">
+                  <li>• Privacy risks</li>
+                  <li>• Compliance violations</li>
+                  <li>• Audit and access issues</li>
+                </ul>
               </div>
 
               <div className="flex flex-wrap gap-3">
@@ -172,7 +228,7 @@ export default function UploadPage() {
                   disabled={status === "uploading"}
                   className="px-6 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 disabled:opacity-60 transition font-medium"
                 >
-                  {status === "uploading" ? "Uploading..." : "Upload Dataset"}
+                  {status === "uploading" ? "Analyzing..." : "Analyze Dataset"}
                 </button>
 
                 <button
@@ -183,6 +239,8 @@ export default function UploadPage() {
                     setStatus("idle");
                     setMessage("");
                     setRecordCount(null);
+                    setAnalysisSummary(null);
+                    setComplianceSummary(null);
                   }}
                   className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 transition font-medium"
                 >
@@ -198,25 +256,19 @@ export default function UploadPage() {
 
               <div className="space-y-3 text-sm">
                 <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-                  <p className="text-gray-400 mb-1">JSON Status</p>
+                  <p className="text-gray-400 mb-1">Data Validation</p>
                   <p className={isValidJson ? "text-emerald-300" : "text-yellow-300"}>
                     {jsonData.trim() ? (isValidJson ? "Valid JSON" : "Invalid JSON") : "No data yet"}
                   </p>
                 </div>
 
                 <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-                  <p className="text-gray-400 mb-1">Records</p>
-                  <p className="text-white">
-                    {parsedPreview
-                      ? Array.isArray(parsedPreview)
-                        ? parsedPreview.length
-                        : 1
-                      : 0}
-                  </p>
+                  <p className="text-gray-400 mb-1">Total Records</p>
+                  <p className="text-white">{extractedPreviewRecords.length}</p>
                 </div>
 
                 <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-                  <p className="text-gray-400 mb-1">Selected Type</p>
+                  <p className="text-gray-400 mb-1">Dataset Category</p>
                   <p className="text-white">{dataType}</p>
                 </div>
               </div>
@@ -226,10 +278,26 @@ export default function UploadPage() {
               <h3 className="text-lg font-semibold mb-4">Upload Status</h3>
 
               {status === "success" && (
-                <div className="rounded-xl bg-emerald-500/15 border border-emerald-400/30 p-4 text-emerald-200 text-sm">
-                  <p className="font-medium mb-1">Upload successful</p>
+                <div className="rounded-xl bg-emerald-500/15 border border-emerald-400/30 p-4 text-emerald-200 text-sm space-y-2">
+                  <p className="font-medium">Analysis Completed</p>
                   <p>{message}</p>
-                  {recordCount !== null && <p className="mt-1">Records uploaded: {recordCount}</p>}
+                  {recordCount !== null && <p>Records uploaded: {recordCount}</p>}
+
+                  {analysisSummary && (
+                    <div className="pt-2 border-t border-emerald-400/20">
+                      <p>Total Risks: {analysisSummary.totalRisks}</p>
+                      <p>Critical: {analysisSummary.critical}</p>
+                      <p>High: {analysisSummary.high}</p>
+                    </div>
+                  )}
+
+                  {complianceSummary && (
+                    <div className="pt-2 border-t border-emerald-400/20">
+                      <p>HIPAA Score: {complianceSummary.hipaaScore}%</p>
+                      <p>DPDPA Score: {complianceSummary.dpdpaScore}%</p>
+                      <p>Overall Score: {complianceSummary.overallScore}%</p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -239,27 +307,31 @@ export default function UploadPage() {
                 </div>
               )}
 
-              {status === "idle" || status === "uploading" ? (
+              {(status === "idle" || status === "uploading") && (
                 <div className="rounded-xl bg-white/5 border border-white/10 p-4 text-sm text-gray-300">
                   {status === "uploading"
-                    ? "Sending data to backend and starting analysis..."
-                    : "Ready to upload a JSON dataset."}
+                    ? "Sending data to backend and running privacy analysis..."
+                    : "Ready to analyze a healthcare JSON dataset."}
                 </div>
-              ) : null}
+              )}
             </section>
 
             <section className="bg-white/10 border border-white/20 backdrop-blur rounded-2xl p-6 shadow-xl">
               <h3 className="text-lg font-semibold mb-4">JSON Format</h3>
               <pre className="text-xs text-gray-300 whitespace-pre-wrap leading-6">
-{`[
-  {
-    "userId": "u1",
-    "email": "patient@test.com",
-    "role": "doctor",
-    "encrypted": false,
-    "diagnosis": "Diabetes"
-  }
-]`}
+{`{
+  "patients": [
+    {
+      "patient_id": "P001",
+      "name": "John Doe",
+      "encrypted": true,
+      "consent_obtained": true,
+      "access_role": "doctor",
+      "retention_policy_days": 30,
+      "audit_log_enabled": true
+    }
+  ]
+}`}
               </pre>
             </section>
           </aside>

@@ -3,13 +3,11 @@ import { ObjectId } from 'mongodb';
 import { AuthRequest, roleMiddleware } from '../middleware/middlewares';
 import { getDB } from '../config/database';
 import logger from '../config/logger';
-import { privacyAnalyzer } from '../utils/privacyAnalyzer';
+import { analyzeHealthcareDataset } from '../services/privacyRuleEngine';
+import { logAccess } from '../services/accessLogger';
 
 const router = Router();
 
-/**
- * Helper: role-aware filters
- */
 function getUploadFilter(req: AuthRequest) {
   const orgId = req.user!.organizationId;
   const userId = req.userId!;
@@ -30,149 +28,226 @@ function getAnalysisFilter(req: AuthRequest) {
     : { organizationId: orgId, createdBy: userId };
 }
 
+function normalizeRecords(input: any): any[] {
+  if (Array.isArray(input?.records)) return input.records;
+  if (Array.isArray(input?.patients)) return input.patients;
+  if (Array.isArray(input?.users)) return input.users;
+  if (Array.isArray(input)) return input;
+  return [];
+}
+
 /**
  * ============================
- * 🚀 Upload Data + Auto Analyze
+ * 🚀 Upload Data + Rule-Based Analysis
  * ============================
  */
 router.post(
   '/',
   roleMiddleware(['admin', 'user']),
   async (req: AuthRequest, res: Response) => {
+    let normalizedFileName = '';
+    let normalizedDataType = 'health';
+
     try {
       const db = getDB();
-      const { fileName, dataType, records, metadata } = req.body;
+      const { fileName, dataType, metadata } = req.body;
 
-      if (!fileName || !dataType || !Array.isArray(records)) {
+      normalizedFileName = String(fileName || '').trim();
+      normalizedDataType = String(dataType || 'health').trim();
+
+      const records = normalizeRecords(req.body);
+
+      if (!normalizedFileName || !normalizedDataType) {
         return res.status(400).json({
           success: false,
-          message: 'Missing required fields: fileName, dataType, records'
+          message: 'Missing required fields: fileName, dataType'
         });
       }
 
-      if (records.length === 0) {
+      if (!Array.isArray(records) || records.length === 0) {
         return res.status(400).json({
           success: false,
-          message: 'No data records provided'
+          message: 'No valid records provided. Expected records, patients, users, or raw array.'
         });
       }
 
       const organizationId = req.user!.organizationId;
       const userId = req.userId!;
 
+      // 1. Save upload metadata
       const uploadResult = await db.collection('uploaded_data').insertOne({
         organizationId,
-        fileName,
-        dataType,
+        fileName: normalizedFileName,
+        dataType: normalizedDataType,
         recordCount: records.length,
         uploadedBy: userId,
         uploadedAt: new Date(),
         status: 'processing',
         metadata: metadata || {},
-        createdAt: new Date()
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
 
+      const uploadId = uploadResult.insertedId;
+
+      // 2. Save normalized raw records
       const processedRecords = records.map((record: any) => ({
         ...record,
-        uploadId: uploadResult.insertedId,
+        uploadId,
+        datasetName: normalizedFileName,
         organizationId,
         uploadedBy: userId,
         processedAt: new Date()
       }));
 
-      await db.collection(`records_${dataType}`).insertMany(processedRecords);
+      await db.collection(`records_${normalizedDataType}`).insertMany(processedRecords);
 
-      setImmediate(async () => {
-        try {
-          const db = getDB();
+      // 3. Run rule-based analysis
+      const analysisResult = analyzeHealthcareDataset(records);
 
-          const storedRecords = await db.collection(`records_${dataType}`)
-            .find({ uploadId: uploadResult.insertedId })
-            .limit(1000)
-            .toArray();
-
-          const analysisData = prepareAnalysisData(storedRecords, dataType);
-          const analysisResult = privacyAnalyzer.analyze(analysisData);
-
-          const result = await db.collection('analysis_results').insertOne({
-            organizationId,
-            uploadedDataId: uploadResult.insertedId,
-            ...analysisResult,
-            createdAt: new Date(),
-            createdBy: userId
-          });
-
-          await db.collection('uploaded_data').updateOne(
-            { _id: uploadResult.insertedId },
-            {
-              $set: {
-                status: 'completed',
-                analysisId: result.insertedId,
-                updatedAt: new Date()
-              }
-            }
-          );
-
-          if (analysisResult.ruleResults?.length) {
-            const risks = analysisResult.ruleResults
-              .filter((r: any) => r.passed === false)
-              .map((r: any) => ({
-                organizationId,
-                dataType,
-                severity: r.severity,
-                riskCategory: r.ruleName,
-                description: r.details,
-                riskCount: r.riskCount || 1,
-                uploadId: uploadResult.insertedId,
-                analysisId: result.insertedId,
-                createdBy: userId,
-                detectedAt: new Date(),
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                status: 'open'
-              }));
-
-            if (risks.length > 0) {
-              await db.collection('privacy_risks').insertMany(risks);
-            }
-          }
-
-          if (analysisResult.anomalies?.length) {
-            const anomalies = analysisResult.anomalies.map((a: any) => ({
-              organizationId,
-              uploadId: uploadResult.insertedId,
-              analysisId: result.insertedId,
-              createdBy: userId,
-              eventType: a.type,
-              severity: a.severity,
-              description: a.description,
-              timestamp: a.timestamp,
-              metadata: a.details,
-              confirmed: false,
-              createdAt: new Date()
-            }));
-
-            await db.collection('anomalies').insertMany(anomalies);
-          }
-
-          logger.info(`Analysis completed for upload ${uploadResult.insertedId.toString()}`);
-        } catch (err) {
-          logger.error('Auto analysis failed:', err);
-        }
+      // 4. Store dataset analysis
+      const analysisInsert = await db.collection('dataset_analysis').insertOne({
+        organizationId,
+        datasetId: uploadId,
+        datasetName: normalizedFileName,
+        uploadedDataId: uploadId,
+        uploadedBy: userId,
+        dataType: normalizedDataType,
+        createdAt: new Date(),
+        createdBy: userId,
+        summary: analysisResult.summary,
+        compliance: analysisResult.compliance
       });
+
+      const analysisId = analysisInsert.insertedId;
+
+      // Optional: backward-compatible analysis_results collection
+      await db.collection('analysis_results').insertOne({
+        organizationId,
+        uploadedDataId: uploadId,
+        datasetId: uploadId,
+        datasetName: normalizedFileName,
+        dataType: normalizedDataType,
+        summary: analysisResult.summary,
+        compliance: analysisResult.compliance,
+        createdAt: new Date(),
+        createdBy: userId
+      });
+
+      // 5. Store risks linked to dataset + record + rule
+      if (analysisResult.risks.length > 0) {
+        const risks = analysisResult.risks.map((risk) => ({
+          organizationId,
+          datasetId: uploadId,
+          datasetName: normalizedFileName,
+          analysisId,
+          dataType: normalizedDataType,
+          recordId: risk.recordId,
+          severity: risk.severity,
+          category: risk.category,
+          riskCategory: risk.category,
+          ruleId: risk.ruleId,
+          description: risk.description,
+          recommendation: risk.recommendation,
+          createdBy: userId,
+          detectedAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          status: 'open'
+        }));
+
+        await db.collection('privacy_risks').insertMany(risks);
+      }
+
+      // 6. Auto-create alerts from critical/high risks
+      const importantRisks = analysisResult.risks.filter(
+        (risk) => risk.severity === 'critical' || risk.severity === 'high'
+      );
+
+      if (importantRisks.length > 0) {
+        const alerts = importantRisks.map((risk) => ({
+          organizationId,
+          datasetId: uploadId,
+          datasetName: normalizedFileName,
+          title: `${risk.category} (Record: ${risk.recordId})`,
+          message: risk.description,
+          severity: risk.severity,
+          type: 'privacy_risk',
+          triggeredByRule: risk.ruleId,
+          affectedResources: [risk.recordId],
+          recommendation: risk.recommendation,
+          createdAt: new Date(),
+          resolved: false,
+          createdBy: userId
+        }));
+
+        await db.collection('alerts').insertMany(alerts);
+      }
+
+      // 7. Mark upload completed
+      await db.collection('uploaded_data').updateOne(
+        { _id: uploadId },
+        {
+          $set: {
+            status: 'completed',
+            analysisId,
+            updatedAt: new Date()
+          }
+        }
+      );
+
+      // 8. Log successful upload access event
+      await logAccess({
+        userId,
+        organizationId,
+        action: 'write',
+        dataType: normalizedDataType,
+        datasetId: uploadId.toString(),
+        datasetName: normalizedFileName,
+        resourceId: `upload:${uploadId.toString()}`,
+        status: 'success',
+        loggedBy: userId,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent') || undefined
+      });
+
+      logger.info(`Rule-based analysis completed for upload ${uploadId.toString()}`);
 
       return res.status(201).json({
         success: true,
-        message: 'Data uploaded successfully',
-        uploadId: uploadResult.insertedId,
+        message: 'Data uploaded and analyzed successfully',
+        uploadId,
+        analysisId,
         recordCount: records.length,
-        status: 'processing'
+        status: 'completed',
+        summary: analysisResult.summary,
+        compliance: analysisResult.compliance
       });
     } catch (error) {
       logger.error('Error uploading data:', error);
+
+      try {
+        if (req.userId && req.user?.organizationId) {
+          await logAccess({
+            userId: req.userId,
+            organizationId: req.user.organizationId,
+            action: 'write',
+            dataType: normalizedDataType,
+            datasetName: normalizedFileName,
+            resourceId: 'upload:failed',
+            status: 'failure',
+            loggedBy: req.userId,
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent') || undefined
+          });
+        }
+      } catch (logErr) {
+        logger.error('Failed to write upload access log:', logErr);
+      }
+
       return res.status(500).json({
         success: false,
-        message: 'Failed to upload data'
+        message: 'Failed to upload and analyze data'
       });
     }
   }
@@ -284,7 +359,7 @@ router.get(
         });
       }
 
-      const result = await db.collection('analysis_results').findOne({
+      const result = await db.collection('dataset_analysis').findOne({
         _id: new ObjectId(analysisId),
         ...getAnalysisFilter(req)
       });
@@ -309,240 +384,5 @@ router.get(
     }
   }
 );
-
-/**
- * ============================
- * 🧠 Helper: Prepare Data Dynamically
- * ============================
- */
-function prepareAnalysisData(records: any[], dataType?: string): any {
-  const permissions: any[] = [];
-  const dataItems: any[] = [];
-  const accessLogs: any[] = [];
-  const users: any[] = [];
-
-  const sensitiveFields = [
-    'ssn',
-    'phone',
-    'email',
-    'address',
-    'medicalrecord',
-    'medical_record',
-    'diagnosis',
-    'treatment',
-    'prescription',
-    'insurance',
-    'dob',
-    'aadhaar'
-  ];
-
-  const trueValues = new Set(['true', 'yes', '1', 'encrypted', 'enabled']);
-  const falseValues = new Set(['false', 'no', '0', 'unencrypted', 'disabled']);
-
-  let hasConsentField = false;
-  let hasRetentionField = false;
-  let retentionDeclared = false;
-  let hasAuditField = false;
-  let auditEnabled = false;
-  let hasBreachPlanField = false;
-  let breachPlanEnabled = false;
-  let hasNotificationField = false;
-  let notificationEnabled = false;
-  let maxNotificationDays = 72;
-
-  let hasAccessControlField = false;
-  let accessControlEnabled = false;
-
-  for (const record of records.slice(0, 1000)) {
-    let recordHasSensitiveField = false;
-    let recordEncrypted = false;
-    let recordEncryptionKnown = false;
-    let recordConsentGiven = true;
-    let recordConsentKnown = false;
-    let recordHasAccessEvent = false;
-
-    for (const [key, rawValue] of Object.entries(record)) {
-      const k = key.toLowerCase();
-      const v = rawValue as any;
-      const vStr = String(v).toLowerCase();
-
-      // Permissions / roles
-      if (
-        k.includes('role') ||
-        k.includes('permission') ||
-        k.includes('accesslevel') ||
-        k.includes('access_level')
-      ) {
-        permissions.push({
-          level: v,
-          userId: (record as any).userId || (record as any).email || 'unknown'
-        });
-
-        hasAccessControlField = true;
-
-        if (
-          ['doctor', 'nurse', 'staff', 'user', 'limited', 'read', 'viewer'].includes(vStr)
-        ) {
-          accessControlEnabled = true;
-        }
-      }
-
-      // Explicit access control style fields
-      if (k.includes('acl') || k.includes('rbac') || k.includes('accesscontrol') || k.includes('access_control')) {
-        hasAccessControlField = true;
-        if (v === true || trueValues.has(vStr)) {
-          accessControlEnabled = true;
-        }
-      }
-
-      // Consent tracking
-      if (k.includes('consent')) {
-        hasConsentField = true;
-        recordConsentKnown = true;
-        recordConsentGiven = v === true || trueValues.has(vStr);
-      }
-
-      // Encryption
-      if (k.includes('encrypt')) {
-        recordEncryptionKnown = true;
-        recordEncrypted = v === true || trueValues.has(vStr);
-      }
-
-      // Sensitive fields
-      if (sensitiveFields.some((field) => k.includes(field))) {
-        recordHasSensitiveField = true;
-      }
-
-      // Access logs
-      if (
-        k.includes('timestamp') ||
-        k.includes('login') ||
-        k.includes('action') ||
-        k.includes('resource') ||
-        k.includes('access')
-      ) {
-        recordHasAccessEvent = true;
-      }
-
-      // Audit logging flags
-      if (k.includes('audit')) {
-        hasAuditField = true;
-        if (v === true || trueValues.has(vStr)) {
-          auditEnabled = true;
-        }
-      }
-
-      // Retention
-      if (k.includes('retention')) {
-        hasRetentionField = true;
-        if (
-          (typeof v === 'number' && v > 0) ||
-          trueValues.has(vStr)
-        ) {
-          retentionDeclared = true;
-        }
-      }
-
-      // Breach response
-      if (k.includes('breachresponse') || k.includes('breach_response') || k.includes('incidentplan') || k.includes('incident_plan')) {
-        hasBreachPlanField = true;
-        if (v === true || trueValues.has(vStr)) {
-          breachPlanEnabled = true;
-        }
-      }
-
-      // Notification procedure / days
-      if (k.includes('notification')) {
-        hasNotificationField = true;
-        if (typeof v === 'number') {
-          maxNotificationDays = v;
-          notificationEnabled = v <= 72;
-        } else if (v === true || trueValues.has(vStr)) {
-          notificationEnabled = true;
-        } else if (falseValues.has(vStr)) {
-          notificationEnabled = false;
-        }
-      }
-
-      if (k.includes('maxnotificationdays') || k.includes('notificationdays') || k.includes('notification_days')) {
-        hasNotificationField = true;
-        if (typeof v === 'number') {
-          maxNotificationDays = v;
-          notificationEnabled = v <= 72;
-        }
-      }
-    }
-
-    if (recordHasSensitiveField) {
-      dataItems.push({
-        isSensitive: true,
-        dataType: 'PHI',
-        encrypted: recordEncryptionKnown ? recordEncrypted : false,
-        encryptionType: recordEncryptionKnown && recordEncrypted ? 'AES-256' : 'none'
-      });
-    }
-
-    if (recordHasAccessEvent || dataType === 'healthcare_access_logs') {
-      accessLogs.push({
-        userId: (record as any).userId || 'unknown',
-        timestamp: (record as any).timestamp || new Date(),
-        actionType: (record as any).action || 'read',
-        resource: (record as any).resource || 'unknown'
-      });
-    }
-
-    if ((record as any).email || (record as any).userId) {
-      users.push({
-        userId: (record as any).userId || 'unknown',
-        email: (record as any).email,
-        consentGiven: recordConsentKnown ? recordConsentGiven : true,
-        consentDate: new Date()
-      });
-    }
-  }
-
-  const rolesCount = new Set(permissions.map((p) => String(p.level).toLowerCase())).size;
-
-  return {
-  permissions,
-
-  dataItems: dataItems.length
-    ? dataItems
-    : [{ isSensitive: false, dataType: 'general', encrypted: true, encryptionType: 'AES-256' }],
-
-  accessControl: {
-    enabled: hasAccessControlField ? accessControlEnabled : rolesCount > 0,
-    rolesCount: rolesCount || 0,
-    hasAuditLog: hasAuditField ? auditEnabled : accessLogs.length > 0
-  },
-
-  accessLogs,
-
-  users: users.length
-    ? users
-    : [{ consentGiven: true }],
-
-  // ✅ FIX: USE hasConsentField here
-  dataCollection: {
-    consentTrackingEnabled: hasConsentField,
-    totalUsers: users.length
-  },
-
-  auditLogging: hasAuditField ? auditEnabled : accessLogs.length > 0,
-
-  logRetention: hasRetentionField ? 180 : 0,
-
-  retentionPolicy: {
-    enabled: hasRetentionField ? retentionDeclared : false,
-    maxRetentionDays: hasRetentionField ? 365 : 0
-  },
-
-  breachResponsePlan: hasBreachPlanField ? breachPlanEnabled : false,
-
-  notificationProcedure: hasNotificationField ? notificationEnabled : false,
-
-  maxNotificationDays
-};
-}
 
 export default router;

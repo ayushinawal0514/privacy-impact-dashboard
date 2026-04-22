@@ -10,16 +10,38 @@ import { apiMethods, setAuthToken } from "@/lib/api-client";
 type RiskItem = {
   _id: string;
   severity: "critical" | "high" | "medium" | "low";
+  category?: string;
   riskCategory?: string;
   description?: string;
+  recommendation?: string;
+  ruleId?: string;
   status?: string;
   dataType?: string;
+  datasetId?: string;
+  datasetName?: string;
+  recordId?: string;
   createdAt?: string;
   detectedAt?: string;
-  riskCount?: number;
-  createdBy?: string;
-  uploadId?: string;
-  analysisId?: string;
+};
+
+type DatasetOption = {
+  datasetId?: string | null;
+  datasetName?: string | null;
+  count: number;
+};
+
+type RisksApiResponse = {
+  success: boolean;
+  role: string;
+  count: number;
+  summary: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  datasets: DatasetOption[];
+  data: RiskItem[];
 };
 
 const severityOrder: Record<string, number> = {
@@ -35,10 +57,18 @@ export default function RisksPage() {
 
   const [loading, setLoading] = useState(true);
   const [risks, setRisks] = useState<RiskItem[]>([]);
+  const [summary, setSummary] = useState({
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+  });
+  const [datasets, setDatasets] = useState<DatasetOption[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [severityFilter, setSeverityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [datasetFilter, setDatasetFilter] = useState("all");
   const [search, setSearch] = useState("");
 
   const accessToken = (session as any)?.accessToken;
@@ -51,7 +81,6 @@ export default function RisksPage() {
 
   useEffect(() => {
     if (!session || !accessToken) return;
-
     setAuthToken(accessToken);
     fetchRisks();
   }, [session, accessToken]);
@@ -62,8 +91,18 @@ export default function RisksPage() {
       setError(null);
 
       const res = await apiMethods.getRisks();
-      const payload = res.data?.data || [];
-      setRisks(payload);
+      const payload: RisksApiResponse = res.data;
+
+      setRisks(payload.data || []);
+      setSummary(
+        payload.summary || {
+          critical: 0,
+          high: 0,
+          medium: 0,
+          low: 0,
+        }
+      );
+      setDatasets(payload.datasets || []);
     } catch (err: any) {
       console.error("Error fetching risks:", err);
       setError(err?.response?.data?.message || "Failed to load risks.");
@@ -77,38 +116,39 @@ export default function RisksPage() {
       .filter((risk) => {
         const matchSeverity =
           severityFilter === "all" || risk.severity === severityFilter;
+
         const matchStatus =
           statusFilter === "all" || (risk.status || "open") === statusFilter;
+
+        const normalizedDatasetName = (risk.datasetName || "").trim();
+        const matchDataset =
+          datasetFilter === "all" || normalizedDatasetName === datasetFilter;
 
         const q = search.trim().toLowerCase();
         const matchSearch =
           !q ||
+          risk.category?.toLowerCase().includes(q) ||
           risk.riskCategory?.toLowerCase().includes(q) ||
           risk.description?.toLowerCase().includes(q) ||
+          risk.recommendation?.toLowerCase().includes(q) ||
+          risk.ruleId?.toLowerCase().includes(q) ||
           risk.dataType?.toLowerCase().includes(q) ||
+          risk.datasetName?.toLowerCase().includes(q) ||
+          risk.recordId?.toLowerCase().includes(q) ||
           risk.severity?.toLowerCase().includes(q);
 
-        return matchSeverity && matchStatus && matchSearch;
+        return matchSeverity && matchStatus && matchDataset && matchSearch;
       })
       .sort((a, b) => {
-        const sev = (severityOrder[a.severity] ?? 9) - (severityOrder[b.severity] ?? 9);
+        const sev =
+          (severityOrder[a.severity] ?? 9) - (severityOrder[b.severity] ?? 9);
         if (sev !== 0) return sev;
 
         const aTime = new Date(a.detectedAt || a.createdAt || 0).getTime();
         const bTime = new Date(b.detectedAt || b.createdAt || 0).getTime();
         return bTime - aTime;
       });
-  }, [risks, severityFilter, statusFilter, search]);
-
-  const summary = useMemo(() => {
-    return risks.reduce(
-      (acc, risk) => {
-        acc[risk.severity] += risk.riskCount || 1;
-        return acc;
-      },
-      { critical: 0, high: 0, medium: 0, low: 0 }
-    );
-  }, [risks]);
+  }, [risks, severityFilter, statusFilter, datasetFilter, search]);
 
   if (status === "loading" || loading) {
     return (
@@ -132,12 +172,12 @@ export default function RisksPage() {
           <div>
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Risk Management</h1>
             <p className="text-slate-600">
-              Review detected privacy and compliance issues across uploaded healthcare datasets
+              Review rule-based privacy and compliance risks across uploaded healthcare datasets
             </p>
           </div>
 
           <Link
-            href="/dashboard"
+            href="/dashboard/admin"
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition w-fit"
           >
             ← Back to Dashboard
@@ -158,14 +198,32 @@ export default function RisksPage() {
         </div>
 
         <div className="bg-white rounded-lg border shadow-sm p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <input
               type="text"
-              placeholder="Search risks..."
+              placeholder="Search risks, rules, records..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="border rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500"
             />
+
+            <select
+              value={datasetFilter}
+              onChange={(e) => setDatasetFilter(e.target.value)}
+              className="border rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Datasets</option>
+              {datasets
+                .filter((d) => d.datasetName)
+                .map((dataset) => (
+                  <option
+                    key={dataset.datasetId || dataset.datasetName || Math.random()}
+                    value={(dataset.datasetName || "").trim()}
+                  >
+                    {(dataset.datasetName || "").trim()} ({dataset.count})
+                  </option>
+                ))}
+            </select>
 
             <select
               value={severityFilter}
@@ -215,27 +273,41 @@ export default function RisksPage() {
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="text-left px-6 py-4 font-semibold text-slate-700">Severity</th>
+                    <th className="text-left px-6 py-4 font-semibold text-slate-700">Dataset</th>
+                    <th className="text-left px-6 py-4 font-semibold text-slate-700">Record</th>
                     <th className="text-left px-6 py-4 font-semibold text-slate-700">Category</th>
+                    <th className="text-left px-6 py-4 font-semibold text-slate-700">Rule</th>
                     <th className="text-left px-6 py-4 font-semibold text-slate-700">Description</th>
-                    <th className="text-left px-6 py-4 font-semibold text-slate-700">Data Type</th>
+                    <th className="text-left px-6 py-4 font-semibold text-slate-700">Recommendation</th>
                     <th className="text-left px-6 py-4 font-semibold text-slate-700">Status</th>
                     <th className="text-left px-6 py-4 font-semibold text-slate-700">Detected</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredRisks.map((risk) => (
-                    <tr key={risk._id} className="border-t hover:bg-slate-50">
+                    <tr key={risk._id} className="border-t hover:bg-slate-50 align-top">
                       <td className="px-6 py-4">
                         <SeverityBadge severity={risk.severity} />
                       </td>
+                      <td className="px-6 py-4 text-slate-700 font-medium">
+                        {risk.datasetName?.trim() || "N/A"}
+                      </td>
+                      <td className="px-6 py-4 text-slate-600">
+                        {risk.recordId || "N/A"}
+                      </td>
                       <td className="px-6 py-4 text-slate-800 font-medium">
-                        {risk.riskCategory || "Uncategorized"}
+                        {risk.category || risk.riskCategory || "Uncategorized"}
+                      </td>
+                      <td className="px-6 py-4 text-slate-600">
+                        <code className="text-xs bg-slate-100 px-2 py-1 rounded">
+                          {risk.ruleId || "N/A"}
+                        </code>
                       </td>
                       <td className="px-6 py-4 text-slate-600 max-w-md">
                         {risk.description || "No description available"}
                       </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {risk.dataType || "N/A"}
+                      <td className="px-6 py-4 text-slate-600 max-w-md">
+                        {risk.recommendation || "No recommendation available"}
                       </td>
                       <td className="px-6 py-4">
                         <StatusBadge status={risk.status || "open"} />

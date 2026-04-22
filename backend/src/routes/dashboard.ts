@@ -210,13 +210,13 @@ router.get(
         resolved: false
       });
 
-      const latestAnalysis = await db.collection('analysis_results')
+      const latestAnalysisArr = await db.collection('dataset_analysis')
         .find(filters.analysisFilter)
         .sort({ createdAt: -1 })
         .limit(1)
         .toArray();
 
-      const latest = latestAnalysis[0];
+      const latest = latestAnalysisArr[0] || null;
 
       return res.json({
         success: true,
@@ -224,9 +224,9 @@ router.get(
           totalUsers,
           totalUploads,
           activeRisks,
-          complianceScore: latest?.complianceScore || 0,
-          hipaaCompliance: latest?.hipaaCompliance || 0,
-          dpdpaCompliance: latest?.dpdpaCompliance || 0,
+          complianceScore: latest?.compliance?.overallScore || 0,
+          hipaaCompliance: latest?.compliance?.hipaaScore || 0,
+          dpdpaCompliance: latest?.compliance?.dpdpaScore || 0,
           pendingAlerts,
           role: req.role
         }
@@ -308,7 +308,7 @@ router.get(
       const filters = getRoleBasedFilters(req);
       const { limit = 12 } = req.query;
 
-      const timeline = await db.collection('analysis_results')
+      const timeline = await db.collection('dataset_analysis')
         .find(filters.analysisFilter)
         .sort({ createdAt: -1 })
         .limit(Number(limit))
@@ -344,11 +344,13 @@ router.get(
 
       const latestUpload = await getLatestUploadWithUser(req);
 
-      const latestAnalysis = await db.collection('analysis_results')
+      const latestAnalysisArr = await db.collection('dataset_analysis')
         .find(filters.analysisFilter)
         .sort({ createdAt: -1 })
         .limit(1)
         .toArray();
+
+      const latestAnalysis = latestAnalysisArr[0] || null;
 
       const totalUploads = await db.collection('uploaded_data').countDocuments(filters.uploadsFilter);
 
@@ -385,7 +387,7 @@ router.get(
           role: req.role,
           totalUploads,
           latestUpload,
-          latestAnalysis: latestAnalysis[0] || null,
+          latestAnalysis,
           recentUploads,
           risks: riskCounts
         }

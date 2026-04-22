@@ -7,16 +7,18 @@ export const connectDB = async (): Promise<Db> => {
   if (db) return db;
 
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://mongodb:27017/healthcare-compliance';
-    
+    const mongoUri =
+      process.env.MONGODB_URI || 'mongodb://mongodb:27017/healthcare-compliance';
+
     client = new MongoClient(mongoUri);
     await client.connect();
-    
+
     db = client.db('healthcare-compliance');
-    
-    // Initialize collections with indexes
+
     await initializeDatabase(db);
-    
+
+    console.log('Connected DB name:', db.databaseName);
+
     return db;
   } catch (error) {
     console.error('Database connection failed:', error);
@@ -40,10 +42,23 @@ export const closeDB = async (): Promise<void> => {
 };
 
 const initializeDatabase = async (database: Db): Promise<void> => {
-  // Create collections with proper indexes
-  const collections = ['users', 'privacy_risks', 'access_logs', 'compliance_reports', 
-                       'audit_logs', 'alerts', 'anomalies', 'policies', 'data_flows',
-                       'risk_assessments', 'ml_models', 'audit_reports'];
+  const collections = [
+    'users',
+    'privacy_risks',
+    'access_logs',
+    'compliance_reports',
+    'audit_logs',
+    'alerts',
+    'anomalies',
+    'policies',
+    'data_flows',
+    'risk_assessments',
+    'ml_models',
+    'audit_reports',
+    'uploaded_data',
+    'dataset_analysis',
+    'analysis_results'
+  ];
 
   for (const collectionName of collections) {
     try {
@@ -55,7 +70,6 @@ const initializeDatabase = async (database: Db): Promise<void> => {
     }
   }
 
-  // Create indexes for common queries
   const usersCollection = database.collection('users');
   await usersCollection.createIndex({ email: 1 }, { unique: true });
   await usersCollection.createIndex({ role: 1 });
