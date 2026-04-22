@@ -66,7 +66,6 @@ router.post('/generate', async (req: AuthRequest, res: Response) => {
       low: anomalies.filter(a => a.severity === 'low').length
     };
 
-    // Calculate compliance scores
     const avgComplianceScore = analysisResults.length > 0
       ? Math.round(analysisResults.reduce((sum, r) => sum + r.complianceScore, 0) / analysisResults.length)
       : 0;
@@ -79,9 +78,38 @@ router.post('/generate', async (req: AuthRequest, res: Response) => {
       ? Math.round(analysisResults.reduce((sum, r) => sum + r.dpdpaCompliance, 0) / analysisResults.length)
       : 0;
 
-    // Calculate access metrics
-    const uniqueUsers = new Set(accessLogs.map(log => log.userId)).size;
-    const failedAccess = accessLogs.filter(log => log.status === 'failure').length;
+    // Normalize access log fields
+    const normalizedAccessLogs = accessLogs.map((log: any) => ({
+      ...log,
+      normalizedAction: String(log.action || log.actionType || '').toLowerCase(),
+      normalizedStatus: String(log.status || '').toLowerCase()
+    }));
+
+    const uniqueUsers = new Set(
+      normalizedAccessLogs
+        .map((log: any) => log.userId)
+        .filter(Boolean)
+    ).size;
+
+    const failedAccess = normalizedAccessLogs.filter(
+      (log: any) => log.normalizedStatus === 'failure'
+    ).length;
+
+    const readOperations = normalizedAccessLogs.filter(
+      (log: any) => log.normalizedAction === 'read'
+    ).length;
+
+    const writeOperations = normalizedAccessLogs.filter(
+      (log: any) => log.normalizedAction === 'write'
+    ).length;
+
+    const deleteOperations = normalizedAccessLogs.filter(
+      (log: any) => log.normalizedAction === 'delete'
+    ).length;
+
+    const exportOperations = normalizedAccessLogs.filter(
+      (log: any) => log.normalizedAction === 'export'
+    ).length;
 
     // Create report document
     const report = {
@@ -108,21 +136,21 @@ router.post('/generate', async (req: AuthRequest, res: Response) => {
           totalAccess: accessLogs.length,
           failedAccess,
           uniqueUsers,
-          readOperations: accessLogs.filter(l => l.actionType === 'read').length,
-          writeOperations: accessLogs.filter(l => l.actionType === 'write').length,
-          deleteOperations: accessLogs.filter(l => l.actionType === 'delete').length,
-          exportOperations: accessLogs.filter(l => l.actionType === 'export').length
+          readOperations,
+          writeOperations,
+          deleteOperations,
+          exportOperations
         }
       },
       topRisks: risks
-        .sort((a, b) => {
+        .sort((a: any, b: any) => {
           const severityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
-          return (severityOrder[b.severity as keyof typeof severityOrder] || 0) - 
+          return (severityOrder[b.severity as keyof typeof severityOrder] || 0) -
                  (severityOrder[a.severity as keyof typeof severityOrder] || 0);
         })
         .slice(0, 10),
       topAnomalies: anomalies
-        .sort((a, b) => b.confidence - a.confidence)
+        .sort((a: any, b: any) => (b.confidence || 0) - (a.confidence || 0))
         .slice(0, 10),
       recommendations: generateRecommendations(riskSummary, anomalySummary, avgComplianceScore),
       generatedBy: req.userId,
@@ -130,7 +158,6 @@ router.post('/generate', async (req: AuthRequest, res: Response) => {
       createdAt: new Date()
     };
 
-    // Store report
     const result = await db.collection('audit_reports').insertOne(report);
 
     return res.status(201).json({
@@ -186,6 +213,13 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     const db = getDB();
     const { id } = req.params;
 
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid report id'
+      });
+    }
+
     const report = await db.collection('audit_reports').findOne({
       _id: new ObjectId(id),
       organizationId: req.user!.organizationId
@@ -213,6 +247,13 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
     const { id } = req.params;
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid report id'
+      });
+    }
 
     const result = await db.collection('audit_reports').deleteOne({
       _id: new ObjectId(id),
@@ -247,7 +288,6 @@ function generateRecommendations(
 ): string[] {
   const recommendations: string[] = [];
 
-  // Severity-based recommendations
   if (riskSummary.critical > 0) {
     recommendations.push('URGENT: Immediately address all critical-severity risks.');
     recommendations.push('Conduct emergency security audit and implement remediation.');
@@ -257,12 +297,10 @@ function generateRecommendations(
     recommendations.push('Review and prioritize high-severity risks for immediate resolution.');
   }
 
-  // Anomaly-based recommendations
   if (anomalySummary.critical > 0) {
     recommendations.push('Investigate critical anomalies - potential security breach detected.');
   }
 
-  // Compliance score recommendations
   if (complianceScore < 60) {
     recommendations.push('Significant compliance gaps identified. Implement comprehensive remediation plan.');
     recommendations.push('Consider third-party security assessment to identify root causes.');
@@ -272,7 +310,6 @@ function generateRecommendations(
     recommendations.push('Good compliance posture. Maintain current controls and continue monitoring.');
   }
 
-  // General recommendations
   recommendations.push('Schedule regular compliance training for all staff members.');
   recommendations.push('Implement continuous monitoring and automated alerting.');
   recommendations.push('Review and update security policies quarterly.');

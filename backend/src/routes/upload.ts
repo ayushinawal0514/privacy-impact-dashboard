@@ -91,7 +91,7 @@ router.post(
             .limit(1000)
             .toArray();
 
-          const analysisData = prepareAnalysisData(storedRecords);
+          const analysisData = prepareAnalysisData(storedRecords, dataType);
           const analysisResult = privacyAnalyzer.analyze(analysisData);
 
           const result = await db.collection('analysis_results').insertOne({
@@ -115,7 +115,7 @@ router.post(
 
           if (analysisResult.ruleResults?.length) {
             const risks = analysisResult.ruleResults
-              .filter((r: any) => !r.passed)
+              .filter((r: any) => r.passed === false)
               .map((r: any) => ({
                 organizationId,
                 dataType,
@@ -312,53 +312,237 @@ router.get(
 
 /**
  * ============================
- * 🧠 Helper: Prepare Data
+ * 🧠 Helper: Prepare Data Dynamically
  * ============================
  */
-function prepareAnalysisData(records: any[]): any {
+function prepareAnalysisData(records: any[], dataType?: string): any {
   const permissions: any[] = [];
   const dataItems: any[] = [];
   const accessLogs: any[] = [];
   const users: any[] = [];
 
-  for (const record of records.slice(0, 100)) {
-    for (const [key, value] of Object.entries(record)) {
+  const sensitiveFields = [
+    'ssn',
+    'phone',
+    'email',
+    'address',
+    'medicalrecord',
+    'medical_record',
+    'diagnosis',
+    'treatment',
+    'prescription',
+    'insurance',
+    'dob',
+    'aadhaar'
+  ];
+
+  const trueValues = new Set(['true', 'yes', '1', 'encrypted', 'enabled']);
+  const falseValues = new Set(['false', 'no', '0', 'unencrypted', 'disabled']);
+
+  let hasConsentField = false;
+  let hasRetentionField = false;
+  let retentionDeclared = false;
+  let hasAuditField = false;
+  let auditEnabled = false;
+  let hasBreachPlanField = false;
+  let breachPlanEnabled = false;
+  let hasNotificationField = false;
+  let notificationEnabled = false;
+  let maxNotificationDays = 72;
+
+  let hasAccessControlField = false;
+  let accessControlEnabled = false;
+
+  for (const record of records.slice(0, 1000)) {
+    let recordHasSensitiveField = false;
+    let recordEncrypted = false;
+    let recordEncryptionKnown = false;
+    let recordConsentGiven = true;
+    let recordConsentKnown = false;
+    let recordHasAccessEvent = false;
+
+    for (const [key, rawValue] of Object.entries(record)) {
       const k = key.toLowerCase();
+      const v = rawValue as any;
+      const vStr = String(v).toLowerCase();
 
-      if (k.includes('role') || k.includes('permission')) {
-        permissions.push({ level: value });
+      // Permissions / roles
+      if (
+        k.includes('role') ||
+        k.includes('permission') ||
+        k.includes('accesslevel') ||
+        k.includes('access_level')
+      ) {
+        permissions.push({
+          level: v,
+          userId: (record as any).userId || (record as any).email || 'unknown'
+        });
+
+        hasAccessControlField = true;
+
+        if (
+          ['doctor', 'nurse', 'staff', 'user', 'limited', 'read', 'viewer'].includes(vStr)
+        ) {
+          accessControlEnabled = true;
+        }
       }
 
-      if (k.includes('email') || k.includes('ssn') || k.includes('phone')) {
-        dataItems.push({
-          isSensitive: true,
-          dataType: 'PHI',
-          encrypted: false
-        });
+      // Explicit access control style fields
+      if (k.includes('acl') || k.includes('rbac') || k.includes('accesscontrol') || k.includes('access_control')) {
+        hasAccessControlField = true;
+        if (v === true || trueValues.has(vStr)) {
+          accessControlEnabled = true;
+        }
       }
 
-      if (k.includes('timestamp') || k.includes('access')) {
-        accessLogs.push({
-          timestamp: new Date(),
-          actionType: 'read'
-        });
+      // Consent tracking
+      if (k.includes('consent')) {
+        hasConsentField = true;
+        recordConsentKnown = true;
+        recordConsentGiven = v === true || trueValues.has(vStr);
+      }
+
+      // Encryption
+      if (k.includes('encrypt')) {
+        recordEncryptionKnown = true;
+        recordEncrypted = v === true || trueValues.has(vStr);
+      }
+
+      // Sensitive fields
+      if (sensitiveFields.some((field) => k.includes(field))) {
+        recordHasSensitiveField = true;
+      }
+
+      // Access logs
+      if (
+        k.includes('timestamp') ||
+        k.includes('login') ||
+        k.includes('action') ||
+        k.includes('resource') ||
+        k.includes('access')
+      ) {
+        recordHasAccessEvent = true;
+      }
+
+      // Audit logging flags
+      if (k.includes('audit')) {
+        hasAuditField = true;
+        if (v === true || trueValues.has(vStr)) {
+          auditEnabled = true;
+        }
+      }
+
+      // Retention
+      if (k.includes('retention')) {
+        hasRetentionField = true;
+        if (
+          (typeof v === 'number' && v > 0) ||
+          trueValues.has(vStr)
+        ) {
+          retentionDeclared = true;
+        }
+      }
+
+      // Breach response
+      if (k.includes('breachresponse') || k.includes('breach_response') || k.includes('incidentplan') || k.includes('incident_plan')) {
+        hasBreachPlanField = true;
+        if (v === true || trueValues.has(vStr)) {
+          breachPlanEnabled = true;
+        }
+      }
+
+      // Notification procedure / days
+      if (k.includes('notification')) {
+        hasNotificationField = true;
+        if (typeof v === 'number') {
+          maxNotificationDays = v;
+          notificationEnabled = v <= 72;
+        } else if (v === true || trueValues.has(vStr)) {
+          notificationEnabled = true;
+        } else if (falseValues.has(vStr)) {
+          notificationEnabled = false;
+        }
+      }
+
+      if (k.includes('maxnotificationdays') || k.includes('notificationdays') || k.includes('notification_days')) {
+        hasNotificationField = true;
+        if (typeof v === 'number') {
+          maxNotificationDays = v;
+          notificationEnabled = v <= 72;
+        }
       }
     }
 
-    if ((record as any).email) {
-      users.push({ email: (record as any).email, consentGiven: true });
+    if (recordHasSensitiveField) {
+      dataItems.push({
+        isSensitive: true,
+        dataType: 'PHI',
+        encrypted: recordEncryptionKnown ? recordEncrypted : false,
+        encryptionType: recordEncryptionKnown && recordEncrypted ? 'AES-256' : 'none'
+      });
+    }
+
+    if (recordHasAccessEvent || dataType === 'healthcare_access_logs') {
+      accessLogs.push({
+        userId: (record as any).userId || 'unknown',
+        timestamp: (record as any).timestamp || new Date(),
+        actionType: (record as any).action || 'read',
+        resource: (record as any).resource || 'unknown'
+      });
+    }
+
+    if ((record as any).email || (record as any).userId) {
+      users.push({
+        userId: (record as any).userId || 'unknown',
+        email: (record as any).email,
+        consentGiven: recordConsentKnown ? recordConsentGiven : true,
+        consentDate: new Date()
+      });
     }
   }
 
+  const rolesCount = new Set(permissions.map((p) => String(p.level).toLowerCase())).size;
+
   return {
-    permissions,
-    dataItems: dataItems.length ? dataItems : [{ isSensitive: true, encrypted: false }],
-    accessControl: { enabled: true },
-    accessLogs,
-    users: users.length ? users : [{ consentGiven: true }],
-    auditLogging: true,
-    retentionPolicy: { enabled: true }
-  };
+  permissions,
+
+  dataItems: dataItems.length
+    ? dataItems
+    : [{ isSensitive: false, dataType: 'general', encrypted: true, encryptionType: 'AES-256' }],
+
+  accessControl: {
+    enabled: hasAccessControlField ? accessControlEnabled : rolesCount > 0,
+    rolesCount: rolesCount || 0,
+    hasAuditLog: hasAuditField ? auditEnabled : accessLogs.length > 0
+  },
+
+  accessLogs,
+
+  users: users.length
+    ? users
+    : [{ consentGiven: true }],
+
+  // ✅ FIX: USE hasConsentField here
+  dataCollection: {
+    consentTrackingEnabled: hasConsentField,
+    totalUsers: users.length
+  },
+
+  auditLogging: hasAuditField ? auditEnabled : accessLogs.length > 0,
+
+  logRetention: hasRetentionField ? 180 : 0,
+
+  retentionPolicy: {
+    enabled: hasRetentionField ? retentionDeclared : false,
+    maxRetentionDays: hasRetentionField ? 365 : 0
+  },
+
+  breachResponsePlan: hasBreachPlanField ? breachPlanEnabled : false,
+
+  notificationProcedure: hasNotificationField ? notificationEnabled : false,
+
+  maxNotificationDays
+};
 }
 
 export default router;
