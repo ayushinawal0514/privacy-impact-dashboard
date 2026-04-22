@@ -12,14 +12,13 @@ pipeline {
 
     environment {
         APP_NAME = "healthcare-privacy-platform"
-        NODE_ENV = "production"
+        NODE_ENV = "development"
 
         NEXTAUTH_URL = "http://localhost:3000"
         NEXT_PUBLIC_API_URL = "http://localhost:3001/api"
         FRONTEND_URL = "http://localhost:3000"
 
         MONGODB_URI = "mongodb://localhost:27017/test"
-
         JWT_SECRET = credentials('jwt-secret')
         NEXTAUTH_SECRET = credentials('nextauth-secret')
     }
@@ -48,7 +47,7 @@ pipeline {
         stage('Install Backend Dependencies') {
             steps {
                 dir('backend') {
-                    bat 'if exist package-lock.json (npm ci) else (npm install)'
+                    bat 'if exist package-lock.json (npm ci --include=dev) else (npm install)'
                 }
             }
         }
@@ -56,7 +55,7 @@ pipeline {
         stage('Install Frontend Dependencies') {
             steps {
                 dir('frontend') {
-                    bat 'if exist package-lock.json (npm ci) else (npm install)'
+                    bat 'if exist package-lock.json (npm ci --include=dev) else (npm install)'
                 }
             }
         }
