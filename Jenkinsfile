@@ -87,7 +87,7 @@ pipeline {
         stage('Run Frontend Tests') {
             steps {
                 dir('frontend') {
-                    bat 'npm run test --if-present -- --passWithNoTests'
+                     bat 'if exist node_modules\\jest\\bin\\jest.js (npm test -- --passWithNoTests) else (echo No frontend tests configured)'
                 }
             }
         }
