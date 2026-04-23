@@ -23,7 +23,6 @@ export default function MetricCard({
       : trend === "down"
         ? "text-red-600"
         : "text-slate-600";
-
   const trendIcon =
     trend === "up"
       ? "↑"
