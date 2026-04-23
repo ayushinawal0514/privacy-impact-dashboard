@@ -18,49 +18,55 @@ interface UploadItem {
 
 interface AnalysisResult {
   _id: string;
-  complianceScore: number;
-  hipaaCompliance: number;
-  dpdpaCompliance: number;
-  ruleResults: Array<{
-    ruleId: string;
-    ruleName: string;
-    severity: "critical" | "high" | "medium" | "low";
-    passed: boolean | null;
-    details: string;
-    riskCount: number;
-  }>;
-  anomalies: Array<{
-    type: string;
-    severity: "critical" | "high" | "medium" | "low";
-    description: string;
-  }>;
-  riskSummary: {
+  datasetId?: string;
+  datasetName?: string;
+  dataType?: string;
+  createdAt: string;
+  summary: {
+    totalRecords: number;
+    totalRisks: number;
     critical: number;
     high: number;
     medium: number;
     low: number;
   };
-  recommendations: string[];
-  summary: string;
-  createdAt: string;
+  compliance: {
+    overallScore: number;
+    hipaaScore: number;
+    dpdpaScore: number;
+    passedRules: number;
+    failedRules: number;
+    requirements?: {
+      encryption?: { passed: number; failed: number; score: number };
+      consent?: { passed: number; failed: number; score: number };
+      accessControl?: { passed: number; failed: number; score: number };
+      auditLogging?: { passed: number; failed: number; score: number };
+      retention?: { passed: number; failed: number; score: number };
+    };
+  };
 }
 
-interface DashboardData {
+interface UserDashboardData {
+  uploadsCount: number;
+  latestUpload: UploadItem | null;
+  complianceScore: number;
+  hipaaCompliance: number;
+  dpdpaCompliance: number;
+  totalRisks: number;
   risks: {
     critical: number;
     high: number;
     medium: number;
     low: number;
   };
-  complianceScore: number;
-  hipaaCompliance: number;
-  dpdpaCompliance: number;
-  pendingAlerts: number;
-  recommendations: string[];
+  passedRules: number;
+  failedRules: number;
   summary: string;
-  latestUpload: UploadItem | null;
-  failedRules: AnalysisResult["ruleResults"];
-  anomalies: AnalysisResult["anomalies"];
+  nextAction: string;
+  requirements: {
+    label: string;
+    score: number;
+  }[];
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
@@ -69,7 +75,7 @@ export default function UserDashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const [data, setData] = useState<DashboardData | null>(null);
+  const [data, setData] = useState<UserDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -116,20 +122,30 @@ export default function UserDashboardPage() {
         }
 
         const uploads: UploadItem[] = uploadsJson.data || [];
-        const latestCompleted = uploads.find((u) => u.status === "completed" && u.analysisId);
+        const latestCompleted = uploads.find(
+          (u) => u.status === "completed" && u.analysisId
+        );
 
         if (!latestCompleted?.analysisId) {
           setData({
-            risks: { critical: 0, high: 0, medium: 0, low: 0 },
+            uploadsCount: uploads.length,
+            latestUpload: uploads[0] || null,
             complianceScore: 0,
             hipaaCompliance: 0,
             dpdpaCompliance: 0,
-            pendingAlerts: 0,
-            recommendations: [],
-            summary: "No completed analysis found yet. Upload and analyze data to see your dashboard insights.",
-            latestUpload: null,
-            failedRules: [],
-            anomalies: [],
+            totalRisks: 0,
+            risks: { critical: 0, high: 0, medium: 0, low: 0 },
+            passedRules: 0,
+            failedRules: 0,
+            summary:
+              uploads.length > 0
+                ? "You have uploaded data, but no completed analysis is available yet."
+                : "You have not uploaded any datasets yet. Start by uploading a healthcare dataset.",
+            nextAction:
+              uploads.length > 0
+                ? "Wait for analysis completion or upload a fresh dataset."
+                : "Upload a dataset to begin privacy and compliance analysis.",
+            requirements: [],
           });
           setLoading(false);
           return;
@@ -152,19 +168,62 @@ export default function UserDashboardPage() {
         }
 
         const analysis: AnalysisResult = resultJson.data;
-        const failedRules = (analysis.ruleResults || []).filter((r) => r.passed === false);
+
+        const requirements = analysis.compliance?.requirements || {};
+
+        const requirementCards = [
+          {
+            label: "Encryption",
+            score: requirements.encryption?.score ?? 0,
+          },
+          {
+            label: "Consent",
+            score: requirements.consent?.score ?? 0,
+          },
+          {
+            label: "Access Control",
+            score: requirements.accessControl?.score ?? 0,
+          },
+          {
+            label: "Audit Logging",
+            score: requirements.auditLogging?.score ?? 0,
+          },
+          {
+            label: "Retention",
+            score: requirements.retention?.score ?? 0,
+          },
+        ];
+
+        const totalRisks = analysis.summary?.totalRisks || 0;
+        const overallScore = analysis.compliance?.overallScore || 0;
+
+        let nextAction = "Your dataset looks healthy.";
+        if ((analysis.summary?.critical || 0) > 0) {
+          nextAction = "Review critical privacy issues immediately.";
+        } else if ((analysis.summary?.high || 0) > 0) {
+          nextAction = "Review high-severity issues and improve compliance.";
+        } else if (totalRisks > 0) {
+          nextAction = "Address medium-priority issues to improve compliance.";
+        }
 
         setData({
-          risks: analysis.riskSummary || { critical: 0, high: 0, medium: 0, low: 0 },
-          complianceScore: analysis.complianceScore || 0,
-          hipaaCompliance: analysis.hipaaCompliance || 0,
-          dpdpaCompliance: analysis.dpdpaCompliance || 0,
-          pendingAlerts: (analysis.riskSummary?.critical || 0) + (analysis.riskSummary?.high || 0),
-          recommendations: analysis.recommendations || [],
-          summary: analysis.summary || "No summary available.",
+          uploadsCount: uploads.length,
           latestUpload: latestCompleted,
-          failedRules,
-          anomalies: analysis.anomalies || [],
+          complianceScore: overallScore,
+          hipaaCompliance: analysis.compliance?.hipaaScore || 0,
+          dpdpaCompliance: analysis.compliance?.dpdpaScore || 0,
+          totalRisks,
+          risks: {
+            critical: analysis.summary?.critical || 0,
+            high: analysis.summary?.high || 0,
+            medium: analysis.summary?.medium || 0,
+            low: analysis.summary?.low || 0,
+          },
+          passedRules: analysis.compliance?.passedRules || 0,
+          failedRules: analysis.compliance?.failedRules || 0,
+          summary: `Your latest analyzed dataset "${latestCompleted.fileName}" contains ${totalRisks} detected risk(s) across ${analysis.summary?.totalRecords || 0} record(s).`,
+          nextAction,
+          requirements: requirementCards,
         });
       } catch (err: any) {
         console.error("Failed to fetch user dashboard data:", err);
@@ -181,16 +240,9 @@ export default function UserDashboardPage() {
 
   const complianceStatus = useMemo(() => {
     if (!data) return "Unknown";
-    if (data.complianceScore >= 80) return "✓ Strong";
-    if (data.complianceScore >= 60) return "⚠ Moderate";
-    return "✗ Weak";
-  }, [data]);
-
-  const riskLevel = useMemo(() => {
-    if (!data) return "Low";
-    if (data.risks.critical > 0) return "Critical";
-    if (data.risks.high > 0) return "High";
-    return "Low";
+    if (data.complianceScore >= 80) return "Strong";
+    if (data.complianceScore >= 60) return "Moderate";
+    return "Needs Attention";
   }, [data]);
 
   if (status === "loading" || loading) {
@@ -198,7 +250,7 @@ export default function UserDashboardPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-blue-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-cyan-400 mx-auto mb-4"></div>
-          <p className="text-gray-300">Loading user dashboard...</p>
+          <p className="text-gray-300">Loading your workspace...</p>
         </div>
       </div>
     );
@@ -212,13 +264,19 @@ export default function UserDashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-white">User Dashboard</h1>
-              <p className="text-sm text-gray-400">Your privacy compliance and risk overview</p>
+              <h1 className="text-2xl font-bold text-white">My Data & Compliance</h1>
+              <p className="text-sm text-gray-400">
+                View your uploads, latest analysis, and compliance health
+              </p>
             </div>
             <div className="flex items-center gap-6">
               <div className="text-right">
-                <p className="text-sm font-medium text-white truncate">{session.user?.name}</p>
-                <p className="text-xs text-gray-400 truncate">{session.user?.email}</p>
+                <p className="text-sm font-medium text-white truncate">
+                  {session.user?.name}
+                </p>
+                <p className="text-xs text-gray-400 truncate">
+                  {session.user?.email}
+                </p>
                 <p className="text-[11px] text-cyan-300 mt-1">Role: User</p>
               </div>
               <button
@@ -240,114 +298,176 @@ export default function UserDashboardPage() {
         )}
 
         <section>
-          <h2 className="text-xl font-bold text-white mb-4">Your Metrics</h2>
+          <h2 className="text-xl font-bold text-white mb-4">My Overview</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <MetricCard
+              title="My Datasets"
+              value={`${data?.uploadsCount || 0}`}
+              tone="blue"
+              subtitle="Uploads available in your workspace"
+            />
             <MetricCard
               title="Compliance Score"
               value={`${data?.complianceScore || 0}%`}
-              badge={complianceStatus}
               tone="emerald"
+              badge={complianceStatus}
               progress={data?.complianceScore || 0}
             />
             <MetricCard
-              title="Your Active Risks"
-              value={`${(data?.risks.critical || 0) + (data?.risks.high || 0) + (data?.risks.medium || 0)}`}
-              badge={riskLevel}
+              title="Detected Risks"
+              value={`${data?.totalRisks || 0}`}
               tone="red"
               subtitle={`Critical: ${data?.risks.critical || 0} • High: ${data?.risks.high || 0}`}
             />
             <MetricCard
-              title="HIPAA Compliance"
-              value={`${data?.hipaaCompliance || 0}%`}
-              tone="blue"
-              progress={data?.hipaaCompliance || 0}
-            />
-            <MetricCard
-              title="DPDP Compliance"
-              value={`${data?.dpdpaCompliance || 0}%`}
+              title="Rules Status"
+              value={`${data?.passedRules || 0}/${(data?.passedRules || 0) + (data?.failedRules || 0)}`}
               tone="indigo"
-              progress={data?.dpdpaCompliance || 0}
+              subtitle={`Failed: ${data?.failedRules || 0}`}
             />
           </div>
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-gradient-to-br from-white/15 to-white/5 backdrop-blur border border-white/30 rounded-lg p-6 shadow-lg">
-            <h3 className="text-xl font-bold text-white mb-4">Quick Actions</h3>
+            <h3 className="text-xl font-bold text-white mb-4">What you can do</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <ActionLink href="/upload" label="Upload Dataset" tone="purple" />
+              <ActionLink href="/risks" label="View My Risks" tone="green" />
               <ActionLink href="/compliance" label="View Compliance" tone="cyan" />
-              <ActionLink href="/upload" label="Upload Data" tone="purple" />
-              <ActionLink href="/audit-reports" label="Generate Report" tone="pink" />
-              <ActionLink href="/risks" label="View Risks" tone="green" />
+              <ActionLink href="/audit-reports" label="My Reports" tone="pink" />
             </div>
           </div>
 
           <div className="bg-gradient-to-br from-white/15 to-white/5 backdrop-blur border border-white/30 rounded-lg p-6 shadow-lg">
-            <h3 className="text-xl font-bold text-white mb-4">Latest Analysis</h3>
+            <h3 className="text-xl font-bold text-white mb-4">Latest Dataset</h3>
             <InfoBox label="File" value={data?.latestUpload?.fileName || "N/A"} />
             <InfoBox label="Type" value={data?.latestUpload?.dataType || "N/A"} />
-            <InfoBox label="Status" value={data?.latestUpload?.status || "N/A"} valueClassName="text-green-400 font-semibold" />
-            <InfoBox label="Pending Alerts" value={`${data?.pendingAlerts || 0}`} valueClassName="text-orange-300 font-semibold" />
+            <InfoBox
+              label="Records"
+              value={`${data?.latestUpload?.recordCount || 0}`}
+            />
+            <InfoBox
+              label="Status"
+              value={data?.latestUpload?.status || "N/A"}
+              valueClassName="text-green-400 font-semibold"
+            />
           </div>
         </section>
 
         <section className="bg-gradient-to-br from-white/15 to-white/5 backdrop-blur border border-white/30 rounded-lg p-6 shadow-lg">
-          <h3 className="text-xl font-bold text-white mb-4">Risk Summary</h3>
+          <h3 className="text-xl font-bold text-white mb-4">My Risk Summary</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-gray-300">
               <thead>
                 <tr className="border-b border-white/20">
                   <th className="text-left py-3 px-4 font-semibold text-white">Severity</th>
                   <th className="text-center py-3 px-4 font-semibold text-white">Count</th>
-                  <th className="text-right py-3 px-4 font-semibold text-white">Status</th>
+                  <th className="text-right py-3 px-4 font-semibold text-white">Meaning</th>
                 </tr>
               </thead>
               <tbody>
-                <RiskRow label="Critical" color="bg-red-500" textColor="text-red-400" value={data?.risks.critical || 0} badge="Urgent" />
-                <RiskRow label="High" color="bg-orange-500" textColor="text-orange-400" value={data?.risks.high || 0} badge="Important" />
-                <RiskRow label="Medium" color="bg-yellow-500" textColor="text-yellow-400" value={data?.risks.medium || 0} badge="Monitor" />
-                <RiskRow label="Low" color="bg-green-500" textColor="text-green-400" value={data?.risks.low || 0} badge="Info" />
+                <RiskRow
+                  label="Critical"
+                  color="bg-red-500"
+                  textColor="text-red-400"
+                  value={data?.risks.critical || 0}
+                  badge="Immediate action"
+                />
+                <RiskRow
+                  label="High"
+                  color="bg-orange-500"
+                  textColor="text-orange-400"
+                  value={data?.risks.high || 0}
+                  badge="Priority"
+                />
+                <RiskRow
+                  label="Medium"
+                  color="bg-yellow-500"
+                  textColor="text-yellow-400"
+                  value={data?.risks.medium || 0}
+                  badge="Review"
+                />
+                <RiskRow
+                  label="Low"
+                  color="bg-green-500"
+                  textColor="text-green-400"
+                  value={data?.risks.low || 0}
+                  badge="Monitor"
+                />
               </tbody>
             </table>
           </div>
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Panel title="Recommendations">
-            {data?.recommendations?.length ? (
-              <ul className="space-y-3">
-                {data.recommendations.map((rec, index) => (
-                  <li key={index} className="text-gray-200 text-sm leading-relaxed bg-white/5 border border-white/10 rounded-lg p-3">
-                    {rec}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-300">No recommendations available.</p>
-            )}
-          </Panel>
-
-          <Panel title="Analysis Summary">
-            <p className="text-gray-200 leading-relaxed">{data?.summary || "No summary available."}</p>
+          <Panel title="My Compliance Snapshot">
+            <div className="space-y-4">
+              <MiniMetric
+                label="Overall Compliance"
+                value={`${data?.complianceScore || 0}%`}
+              />
+              <MiniMetric
+                label="HIPAA Compliance"
+                value={`${data?.hipaaCompliance || 0}%`}
+              />
+              <MiniMetric
+                label="DPDP Compliance"
+                value={`${data?.dpdpaCompliance || 0}%`}
+              />
+            </div>
 
             <div className="mt-6">
-              <h4 className="text-lg font-semibold text-white mb-3">Failed Rules</h4>
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                {data?.failedRules?.length ? (
-                  data.failedRules.map((rule) => (
-                    <div key={rule.ruleId} className="bg-white/5 border border-white/10 rounded-lg p-3">
-                      <div className="flex justify-between gap-3">
-                        <p className="text-white font-medium text-sm">{rule.ruleName}</p>
-                        <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-200 capitalize whitespace-nowrap">
-                          {rule.severity}
-                        </span>
+              <h4 className="text-lg font-semibold text-white mb-3">
+                Requirement Scores
+              </h4>
+              <div className="space-y-3">
+                {data?.requirements?.length ? (
+                  data.requirements.map((item) => (
+                    <div key={item.label}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-200">{item.label}</span>
+                        <span className="text-gray-300">{item.score}%</span>
                       </div>
-                      <p className="text-gray-300 text-xs mt-2">{rule.details}</p>
+                      <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-cyan-400 h-full"
+                          style={{ width: `${item.score}%` }}
+                        />
+                      </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-gray-300 text-sm">No failed rules found.</p>
+                  <p className="text-gray-300 text-sm">
+                    No requirement breakdown available yet.
+                  </p>
                 )}
+              </div>
+            </div>
+          </Panel>
+
+          <Panel title="What this means for me">
+            <div className="space-y-4">
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                <p className="text-sm text-gray-400 mb-2">Summary</p>
+                <p className="text-gray-200 leading-relaxed">
+                  {data?.summary || "No summary available."}
+                </p>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                <p className="text-sm text-gray-400 mb-2">Suggested next action</p>
+                <p className="text-gray-200 leading-relaxed">
+                  {data?.nextAction || "No immediate action needed."}
+                </p>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                <p className="text-sm text-gray-400 mb-2">Why this page matters</p>
+                <p className="text-gray-200 leading-relaxed">
+                  This view helps you understand the privacy health of your own uploaded
+                  data without exposing organization-wide administrative controls.
+                </p>
               </div>
             </div>
           </Panel>
@@ -402,15 +522,24 @@ function MetricCard({
   const styles = toneMap[tone];
 
   return (
-    <div className={`min-h-[140px] bg-gradient-to-br ${styles.box} backdrop-blur border rounded-lg p-6 shadow-lg`}>
+    <div
+      className={`min-h-[140px] bg-gradient-to-br ${styles.box} backdrop-blur border rounded-lg p-6 shadow-lg`}
+    >
       <div className="flex justify-between items-start mb-4">
         <p className="text-sm text-gray-300 font-medium">{title}</p>
-        {badge ? <span className={`text-xs font-bold px-2 py-1 rounded ${styles.badge}`}>{badge}</span> : null}
+        {badge ? (
+          <span className={`text-xs font-bold px-2 py-1 rounded ${styles.badge}`}>
+            {badge}
+          </span>
+        ) : null}
       </div>
       <p className={`text-4xl font-bold mb-2 ${styles.text}`}>{value}</p>
       {typeof progress === "number" ? (
         <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
-          <div className={`${styles.bg} h-full transition-all duration-500`} style={{ width: `${progress}%` }} />
+          <div
+            className={`${styles.bg} h-full transition-all duration-500`}
+            style={{ width: `${progress}%` }}
+          />
         </div>
       ) : null}
       {subtitle ? <div className="text-xs text-gray-400 mt-2">{subtitle}</div> : null}
@@ -498,8 +627,25 @@ function RiskRow({
       </td>
       <td className={`py-3 px-4 text-center font-bold ${textColor}`}>{value}</td>
       <td className="py-3 px-4 text-right">
-        <span className="text-xs px-2 py-1 bg-white/10 text-gray-200 rounded-full">{badge}</span>
+        <span className="text-xs px-2 py-1 bg-white/10 text-gray-200 rounded-full">
+          {badge}
+        </span>
       </td>
     </tr>
+  );
+}
+
+function MiniMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+      <span className="text-gray-300">{label}</span>
+      <span className="text-white font-semibold">{value}</span>
+    </div>
   );
 }
