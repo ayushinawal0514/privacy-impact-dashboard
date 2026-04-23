@@ -32,14 +32,12 @@ function getRoleBasedFilters(req: AuthRequest) {
     analysisFilter: isAdmin
       ? { organizationId: orgId }
       : { organizationId: orgId, createdBy: userId },
-
     accessLogsFilter: isAdmin
       ? { organizationId: orgId }
       : {
           organizationId: orgId,
           $or: [{ userId }, { createdBy: userId }]
         },
-
     complianceFilter: isAdmin
       ? { organizationId: orgId }
       : {
@@ -49,9 +47,6 @@ function getRoleBasedFilters(req: AuthRequest) {
   };
 }
 
-/**
- * Latest upload with uploader info
- */
 async function getLatestUploadWithUser(req: AuthRequest) {
   const db = getDB();
   const filters = getRoleBasedFilters(req);
@@ -113,9 +108,6 @@ async function getLatestUploadWithUser(req: AuthRequest) {
   return result[0] || null;
 }
 
-/**
- * Recent uploads with uploader info for admin
- */
 async function getRecentUploadsWithUser(req: AuthRequest, limit = 5) {
   const db = getDB();
   const filters = getRoleBasedFilters(req);
@@ -176,11 +168,6 @@ async function getRecentUploadsWithUser(req: AuthRequest, limit = 5) {
   return db.collection('uploaded_data').aggregate(pipeline).toArray();
 }
 
-/**
- * ============================
- * Dashboard Metrics
- * ============================
- */
 router.get(
   '/metrics',
   roleMiddleware(['admin', 'user']),
@@ -236,11 +223,6 @@ router.get(
   }
 );
 
-/**
- * ============================
- * Recent Activity
- * ============================
- */
 router.get(
   '/activity',
   roleMiddleware(['admin', 'user']),
