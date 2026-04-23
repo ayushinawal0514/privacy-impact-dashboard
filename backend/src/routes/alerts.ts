@@ -49,18 +49,15 @@ router.get('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res:
     if (datasetId && typeof datasetId === 'string' && ObjectId.isValid(datasetId)) {
       filter.datasetId = new ObjectId(datasetId);
     }
-
     if (datasetName && typeof datasetName === 'string') {
       filter.datasetName = datasetName.trim();
     }
-
     const alerts = await db.collection('alerts')
       .find(filter)
       .sort({ createdAt: -1 })
       .skip(Number(skip))
       .limit(Number(limit))
       .toArray();
-
     const total = await db.collection('alerts').countDocuments(filter);
 
     const summary = {
@@ -121,7 +118,6 @@ router.get('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res:
     });
   }
 });
-
 router.post('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
@@ -137,7 +133,6 @@ router.post('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res
       riskId,
       recommendation
     } = req.body;
-
     const alert: any = {
       title,
       message,
@@ -165,7 +160,6 @@ router.post('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res
     if (recommendation) {
       alert.recommendation = recommendation;
     }
-
     if (riskId && typeof riskId === 'string' && ObjectId.isValid(riskId)) {
       alert.riskId = new ObjectId(riskId);
     }
@@ -201,7 +195,6 @@ router.post('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res
     });
   }
 });
-
 router.put('/:id/resolve', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
@@ -268,5 +261,4 @@ router.put('/:id/resolve', roleMiddleware(['admin', 'user']), async (req: AuthRe
     });
   }
 });
-
 export default router;
