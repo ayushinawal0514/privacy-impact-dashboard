@@ -1,5 +1,34 @@
+# Node
 node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js
 .next
-.git
+out
+
+# Build outputs
+dist
+build
+
+# Logs
+*.log
+backend/logs
+
+# Env files (VERY IMPORTANT)
 .env
-.env.local
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.yml
+Dockerfile

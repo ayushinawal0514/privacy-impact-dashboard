@@ -1,9 +1,6 @@
-version: '3.8'
-
 services:
-  # MongoDB - Database
   mongodb:
-    image: mongo:7.1.0
+    image: mongo:7
     container_name: healthcare-mongodb
     ports:
       - "27017:27017"
@@ -13,17 +10,16 @@ services:
       MONGO_INITDB_DATABASE: healthcare-compliance
     volumes:
       - mongodb_data:/data/db
-      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
     networks:
       - healthcare-network
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      test: ["CMD", "mongosh", "--host", "localhost", "--eval", "db.adminCommand('ping').ok"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
 
-  # Backend API Server
   backend:
     build:
       context: ./backend
@@ -45,15 +41,8 @@ services:
       - ./backend/logs:/app/logs
     networks:
       - healthcare-network
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
     restart: unless-stopped
 
-  # Frontend Web App
   frontend:
     build:
       context: ./frontend
@@ -71,17 +60,10 @@ services:
       - backend
     networks:
       - healthcare-network
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
     restart: unless-stopped
 
 volumes:
   mongodb_data:
-    driver: local
 
 networks:
   healthcare-network:
