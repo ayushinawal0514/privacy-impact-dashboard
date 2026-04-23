@@ -25,7 +25,6 @@ export interface PrivacyRisk {
   updatedAt: Date;
   status: 'open' | 'mitigated' | 'closed';
 }
-
 export interface AccessLog {
   _id?: ObjectId;
   organizationId: string;
@@ -41,7 +40,6 @@ export interface AccessLog {
   details?: string;
   createdAt: Date;
 }
-
 export interface ComplianceReport {
   _id?: ObjectId;
   organizationId: string;
