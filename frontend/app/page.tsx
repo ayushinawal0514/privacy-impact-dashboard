@@ -17,7 +17,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-blue-900 text-white">
-      {/* Single Header */}
       <header className="sticky top-0 z-50 border-b border-white/10 bg-black/25 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div>
@@ -65,7 +64,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero Section */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
         <div className="text-center">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
@@ -84,7 +82,7 @@ export default function Home() {
             Protected by role-based authentication and secure session validation
           </p>
 
-          {/* CTA Buttons */}
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             {session ? (
               <Link
@@ -119,7 +117,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* Summary Cards */}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
             <div className="bg-white/10 backdrop-blur border border-white/20 rounded-lg p-8 hover:bg-white/20 transition">
               <div className="text-3xl font-bold text-cyan-400 mb-2">HIPAA</div>
@@ -148,7 +146,6 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-white/10 py-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-400">
           <p>&copy; 2026 Healthcare Privacy Compliance Platform. All rights reserved.</p>
