@@ -9,7 +9,6 @@ const router = Router();
 
 type UserRole = 'admin' | 'user';
 
-// Register
 router.post('/register', async (req: Request, res: Response) => {
   try {
     const {
@@ -46,8 +45,6 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     let assignedRole: UserRole = 'user';
-
-    // Only allow admin creation with secret key
     if (role === 'admin') {
       if (adminKey && adminKey === process.env.ADMIN_REGISTRATION_KEY) {
         assignedRole = 'admin';
@@ -154,8 +151,6 @@ router.post('/login', async (req: Request, res: Response) => {
     });
   }
 });
-
-// Current authenticated user
 router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
