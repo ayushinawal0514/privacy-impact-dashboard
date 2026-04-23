@@ -1,5 +1,4 @@
 import { ObjectId } from 'mongodb';
-
 export interface User {
   _id?: ObjectId;
   email: string;
@@ -11,7 +10,6 @@ export interface User {
   updatedAt: Date;
   active: boolean;
 }
-
 export interface PrivacyRisk {
   _id?: ObjectId;
   organizationId: string;
@@ -27,7 +25,6 @@ export interface PrivacyRisk {
   updatedAt: Date;
   status: 'open' | 'mitigated' | 'closed';
 }
-
 export interface AccessLog {
   _id?: ObjectId;
   organizationId: string;
@@ -43,7 +40,6 @@ export interface AccessLog {
   details?: string;
   createdAt: Date;
 }
-
 export interface ComplianceReport {
   _id?: ObjectId;
   organizationId: string;
