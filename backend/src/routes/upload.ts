@@ -36,11 +36,6 @@ function normalizeRecords(input: any): any[] {
   return [];
 }
 
-/**
- * ============================
- * 🚀 Upload Data + Rule-Based Analysis
- * ============================
- */
 router.post(
   '/',
   roleMiddleware(['admin', 'user']),
@@ -74,7 +69,6 @@ router.post(
       const organizationId = req.user!.organizationId;
       const userId = req.userId!;
 
-      // 1. Save upload metadata
       const uploadResult = await db.collection('uploaded_data').insertOne({
         organizationId,
         fileName: normalizedFileName,
@@ -90,7 +84,6 @@ router.post(
 
       const uploadId = uploadResult.insertedId;
 
-      // 2. Save normalized raw records
       const processedRecords = records.map((record: any) => ({
         ...record,
         uploadId,
@@ -102,10 +95,8 @@ router.post(
 
       await db.collection(`records_${normalizedDataType}`).insertMany(processedRecords);
 
-      // 3. Run rule-based analysis
       const analysisResult = analyzeHealthcareDataset(records);
 
-      // 4. Store dataset analysis
       const analysisInsert = await db.collection('dataset_analysis').insertOne({
         organizationId,
         datasetId: uploadId,
@@ -121,7 +112,6 @@ router.post(
 
       const analysisId = analysisInsert.insertedId;
 
-      // Optional: backward-compatible analysis_results collection
       await db.collection('analysis_results').insertOne({
         organizationId,
         uploadedDataId: uploadId,
@@ -134,7 +124,6 @@ router.post(
         createdBy: userId
       });
 
-      // 5. Store risks linked to dataset + record + rule
       if (analysisResult.risks.length > 0) {
         const risks = analysisResult.risks.map((risk) => ({
           organizationId,
@@ -159,7 +148,6 @@ router.post(
         await db.collection('privacy_risks').insertMany(risks);
       }
 
-      // 6. Auto-create alerts from critical/high risks
       const importantRisks = analysisResult.risks.filter(
         (risk) => risk.severity === 'critical' || risk.severity === 'high'
       );
@@ -184,7 +172,6 @@ router.post(
         await db.collection('alerts').insertMany(alerts);
       }
 
-      // 7. Mark upload completed
       await db.collection('uploaded_data').updateOne(
         { _id: uploadId },
         {
@@ -196,7 +183,6 @@ router.post(
         }
       );
 
-      // 8. Log successful upload access event
       await logAccess({
         userId,
         organizationId,
@@ -253,11 +239,6 @@ router.post(
   }
 );
 
-/**
- * ============================
- * 📊 Get Upload History
- * ============================
- */
 router.get(
   '/uploads',
   roleMiddleware(['admin', 'user']),
@@ -293,11 +274,6 @@ router.get(
   }
 );
 
-/**
- * ============================
- * 📄 Get Single Upload Details
- * ============================
- */
 router.get(
   '/uploads/:id',
   roleMiddleware(['admin', 'user']),
@@ -338,12 +314,6 @@ router.get(
     }
   }
 );
-
-/**
- * ============================
- * 📈 Get Analysis Result by analysisId
- * ============================
- */
 router.get(
   '/results/:analysisId',
   roleMiddleware(['admin', 'user']),
