@@ -251,7 +251,6 @@ router.get(
             .sort({ uploadedAt: -1 })
             .limit(Number(limit))
             .toArray();
-
       return res.json({
         success: true,
         data: {
@@ -271,11 +270,6 @@ router.get(
   }
 );
 
-/**
- * ============================
- * Compliance Timeline
- * ============================
- */
 router.get(
   '/compliance-timeline',
   roleMiddleware(['admin', 'user']),
@@ -305,12 +299,6 @@ router.get(
     }
   }
 );
-
-/**
- * ============================
- * Role-aware Dashboard Summary
- * ============================
- */
 router.get(
   '/summary',
   roleMiddleware(['admin', 'user']),
@@ -326,11 +314,9 @@ router.get(
         .sort({ createdAt: -1 })
         .limit(1)
         .toArray();
-
       const latestAnalysis = latestAnalysisArr[0] || null;
 
       const totalUploads = await db.collection('uploaded_data').countDocuments(filters.uploadsFilter);
-
       const recentUploads = filters.isAdmin
         ? await getRecentUploadsWithUser(req, 5)
         : await db.collection('uploaded_data')
@@ -378,5 +364,4 @@ router.get(
     }
   }
 );
-
 export default router;
