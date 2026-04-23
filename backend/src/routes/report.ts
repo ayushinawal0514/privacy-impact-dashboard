@@ -71,11 +71,6 @@ function generateRecommendationsFromAnalysis(
   return recommendations.slice(0, 10);
 }
 
-/**
- * ============================
- * Generate audit report from real dataset analysis
- * ============================
- */
 router.post('/generate', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
@@ -268,11 +263,6 @@ router.post('/generate', roleMiddleware(['admin', 'user']), async (req: AuthRequ
   }
 });
 
-/**
- * ============================
- * Get all reports
- * ============================
- */
 router.get('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
@@ -326,11 +316,6 @@ router.get('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res:
   }
 });
 
-/**
- * ============================
- * Get report by ID
- * ============================
- */
 router.get('/:id', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
@@ -379,11 +364,6 @@ router.get('/:id', roleMiddleware(['admin', 'user']), async (req: AuthRequest, r
   }
 });
 
-/**
- * ============================
- * Delete report
- * ============================
- */
 router.delete('/:id', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
