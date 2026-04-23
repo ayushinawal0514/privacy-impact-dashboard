@@ -7,9 +7,6 @@ import { logAccess } from '../services/accessLogger'; // ✅ ADD
 
 const router = Router();
 
-/**
- * Helper: Role-based filter
- */
 function getRiskFilter(req: AuthRequest) {
   const isAdmin = req.role === 'admin';
 

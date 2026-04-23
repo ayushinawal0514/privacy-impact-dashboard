@@ -364,11 +364,6 @@ router.get('/:id', roleMiddleware(['admin', 'user']), async (req: AuthRequest, r
   }
 });
 
-/**
- * ============================
- * Delete report
- * ============================
- */
 router.delete('/:id', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
