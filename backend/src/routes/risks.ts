@@ -18,11 +18,6 @@ function getRiskFilter(req: AuthRequest) {
       };
 }
 
-/**
- * ============================
- * Get all risks
- * ============================
- */
 router.get('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
@@ -88,7 +83,6 @@ router.get('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res:
       { $sort: { _id: 1 } }
     ]).toArray();
 
-    // ✅ LOG ACCESS (READ LIST)
     await logAccess({
       userId: req.userId!,
       organizationId: req.user!.organizationId,
@@ -125,11 +119,6 @@ router.get('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res:
   }
 });
 
-/**
- * ============================
- * Get risk by ID
- * ============================
- */
 router.get('/:id', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
