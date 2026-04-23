@@ -27,12 +27,28 @@ const API_PREFIX = '/api';
 // ==================
 app.use(helmet());
 
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+const allowedOrigins = [
+  'http://localhost:3000',
+  process.env.FRONTEND_URL,
+].filter(Boolean) as string[];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // allow server-to-server, curl, Postman, health checks
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
@@ -45,7 +61,7 @@ app.get('/', (_req: Request, res: Response) => {
   return res.json({
     message: 'Healthcare Privacy Compliance API',
     version: '1.0.0',
-    healthCheck: '/api/health'
+    healthCheck: '/api/health',
   });
 });
 
@@ -74,7 +90,7 @@ app.use((req: Request, res: Response) => {
   return res.status(404).json({
     success: false,
     message: 'Route not found',
-    path: req.path
+    path: req.path,
   });
 });
 
@@ -90,6 +106,7 @@ const startServer = async () => {
   try {
     await connectDB();
     console.log('✓ Database connected successfully');
+    console.log('✓ Allowed CORS origins:', allowedOrigins);
 
     app.listen(PORT, () => {
       console.log(`✓ Server running on http://localhost:${PORT}`);
