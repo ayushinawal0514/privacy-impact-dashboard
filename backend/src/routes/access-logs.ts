@@ -17,9 +17,6 @@ function getAccessFilter(req: AuthRequest) {
       };
 }
 
-/**
- * Get access logs with optional filtering
- */
 router.get('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
@@ -72,9 +69,6 @@ router.get('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res:
   }
 });
 
-/**
- * Log access event
- */
 router.post('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
@@ -127,9 +121,6 @@ router.post('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res
   }
 });
 
-/**
- * Get access analytics
- */
 router.get('/analytics', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();

@@ -17,18 +17,6 @@ function getAlertFilter(req: AuthRequest) {
         createdBy: req.userId
       };
 }
-
-/**
- * ============================
- * Get all alerts
- * Supports filtering by:
- * - severity
- * - resolved
- * - datasetId
- * - datasetName
- * - type
- * ============================
- */
 router.get('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
@@ -94,7 +82,6 @@ router.get('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res:
       { $sort: { _id: 1 } }
     ]).toArray();
 
-    // ✅ ACCESS LOG: read alerts list
     await logAccess({
       userId: req.userId!,
       organizationId: req.user!.organizationId,
@@ -135,13 +122,6 @@ router.get('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res:
   }
 });
 
-/**
- * ============================
- * Create alert
- * Manual create still supported, but now
- * aligns with dataset-linked rule-based flow
- * ============================
- */
 router.post('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
@@ -192,7 +172,6 @@ router.post('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res
 
     const result = await db.collection('alerts').insertOne(alert);
 
-    // ✅ ACCESS LOG: create alert
     await logAccess({
       userId: req.userId!,
       organizationId: req.user!.organizationId,
@@ -223,11 +202,6 @@ router.post('/', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res
   }
 });
 
-/**
- * ============================
- * Resolve alert
- * ============================
- */
 router.put('/:id/resolve', roleMiddleware(['admin', 'user']), async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
@@ -265,8 +239,6 @@ router.put('/:id/resolve', roleMiddleware(['admin', 'user']), async (req: AuthRe
         message: 'Alert not found'
       });
     }
-
-    // ✅ ACCESS LOG: resolve/update alert
     await logAccess({
       userId: req.userId!,
       organizationId: req.user!.organizationId,

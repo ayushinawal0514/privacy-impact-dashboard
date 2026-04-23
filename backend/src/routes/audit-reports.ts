@@ -5,8 +5,6 @@ import { getDB } from '../config/database';
 import logger from '../config/logger';
 
 const router = Router();
-
-// Get audit reports
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
@@ -32,8 +30,6 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ success: false, message: 'Failed to fetch audit reports' });
   }
 });
-
-// Get audit report by ID
 router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
@@ -52,8 +48,6 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ success: false, message: 'Failed to fetch audit report' });
   }
 });
-
-// Create audit report
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
     const db = getDB();
