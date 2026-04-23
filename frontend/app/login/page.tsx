@@ -42,7 +42,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 px-4">
       <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden grid md:grid-cols-2">
-        {/* LEFT SIDE */}
+
         <div className="hidden md:flex flex-col justify-center items-center bg-gradient-to-br from-indigo-600 to-blue-600 text-white p-10">
           <h2 className="text-3xl font-bold mb-4">Welcome Back!</h2>
           <p className="text-center text-sm mb-6">
@@ -56,7 +56,7 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        {/* RIGHT SIDE */}
+
         <div className="p-8 flex flex-col justify-center">
           <h2 className="text-2xl font-bold mb-6 text-gray-800">Sign In</h2>
 
@@ -105,3 +105,4 @@ export default function LoginPage() {
     </div>
   );
 }
+//access logs
