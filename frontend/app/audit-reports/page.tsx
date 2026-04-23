@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import jsPDF from "jspdf";
 import { EnhancedDashboardLayout } from "@/app/components/dashboard/EnhancedLayout";
 import { apiMethods, setAuthToken, getApiClient } from "@/lib/api-client";
 
@@ -18,6 +19,10 @@ type AuditReport = {
   summary?: {
     totalEvents?: number;
     risksIdentified?: number;
+    totalRecords?: number;
+    totalRisks?: number;
+    totalAlerts?: number;
+    totalAccessEvents?: number;
     complianceScore?: number;
     hipaaCompliance?: number;
     dpdpaCompliance?: number;
@@ -37,19 +42,30 @@ type AuditReport = {
       medium?: number;
       low?: number;
     };
+    alerts?: {
+      critical?: number;
+      high?: number;
+      medium?: number;
+      low?: number;
+      resolved?: number;
+      open?: number;
+    };
     accessMetrics?: {
       totalAccess?: number;
       failedAccess?: number;
       uniqueUsers?: number;
       readOperations?: number;
       writeOperations?: number;
+      updateOperations?: number;
       deleteOperations?: number;
       exportOperations?: number;
     };
+    complianceRequirements?: any;
   };
   recommendations?: string[];
   generatedAt?: string;
   generatedBy?: string;
+  datasetName?: string;
 };
 
 export default function AuditReportsPage() {
@@ -162,6 +178,101 @@ export default function AuditReportsPage() {
     }
   }
 
+  function downloadReportAsPDF(report: AuditReport) {
+    const doc = new jsPDF();
+    let y = 20;
+
+    const addLine = (label: string, value: string) => {
+      doc.setFont("helvetica", "bold");
+      doc.text(label, 14, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(value, 70, y);
+      y += 8;
+    };
+
+    const ensureSpace = (extra = 10) => {
+      if (y + extra > 280) {
+        doc.addPage();
+        y = 20;
+      }
+    };
+
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("Healthcare Privacy Audit Report", 14, y);
+    y += 12;
+
+    doc.setFontSize(12);
+
+    addLine("Report Name:", report.reportName || "N/A");
+    addLine("Dataset Name:", report.datasetName || "N/A");
+    addLine("Report Type:", report.reportType || "N/A");
+    addLine("Generated:", formatDate(report.generatedAt));
+
+    ensureSpace(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Summary", 14, y);
+    y += 8;
+
+    addLine("Compliance Score:", `${report.summary?.complianceScore ?? 0}%`);
+    addLine("HIPAA Compliance:", `${report.summary?.hipaaCompliance ?? 0}%`);
+    addLine("DPDPA Compliance:", `${report.summary?.dpdpaCompliance ?? 0}%`);
+    addLine("Total Records:", `${report.summary?.totalRecords ?? 0}`);
+    addLine("Total Risks:", `${report.summary?.totalRisks ?? report.summary?.risksIdentified ?? 0}`);
+    addLine("Total Alerts:", `${report.summary?.totalAlerts ?? 0}`);
+    addLine("Access Events:", `${report.summary?.totalAccessEvents ?? 0}`);
+    addLine("Unique Users:", `${report.summary?.uniqueUsers ?? 0}`);
+
+    ensureSpace(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Risk Breakdown", 14, y);
+    y += 8;
+
+    addLine("Critical:", `${report.details?.risks?.critical ?? 0}`);
+    addLine("High:", `${report.details?.risks?.high ?? 0}`);
+    addLine("Medium:", `${report.details?.risks?.medium ?? 0}`);
+    addLine("Low:", `${report.details?.risks?.low ?? 0}`);
+
+    ensureSpace(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("Access Metrics", 14, y);
+    y += 8;
+
+    addLine("Total Access:", `${report.details?.accessMetrics?.totalAccess ?? 0}`);
+    addLine("Failed Access:", `${report.details?.accessMetrics?.failedAccess ?? 0}`);
+    addLine("Read Operations:", `${report.details?.accessMetrics?.readOperations ?? 0}`);
+    addLine("Write Operations:", `${report.details?.accessMetrics?.writeOperations ?? 0}`);
+    addLine("Update Operations:", `${report.details?.accessMetrics?.updateOperations ?? 0}`);
+    addLine("Delete Operations:", `${report.details?.accessMetrics?.deleteOperations ?? 0}`);
+    addLine("Export Operations:", `${report.details?.accessMetrics?.exportOperations ?? 0}`);
+
+    ensureSpace(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("Recommendations", 14, y);
+    y += 8;
+
+    const recs = report.recommendations || [];
+    doc.setFont("helvetica", "normal");
+
+    if (recs.length === 0) {
+      doc.text("No recommendations available.", 14, y);
+      y += 8;
+    } else {
+      recs.forEach((r, i) => {
+        const lines = doc.splitTextToSize(`${i + 1}. ${r}`, 180);
+        ensureSpace(lines.length * 7 + 4);
+        doc.text(lines, 14, y);
+        y += lines.length * 7;
+      });
+    }
+
+    const fileName = (report.reportName || "audit_report")
+      .replace(/[^\w\-]+/g, "_")
+      .toLowerCase();
+
+    doc.save(`${fileName}.pdf`);
+  }
+
   const totalReports = useMemo(() => reports.length, [reports]);
 
   if (status === "loading" || loading) {
@@ -186,7 +297,7 @@ export default function AuditReportsPage() {
           <div>
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Audit Reports</h1>
             <p className="text-slate-600">
-              Generate and review compliance audit summaries from risks, anomalies, and access activity
+              Generate and review compliance audit summaries from risks, alerts, and access activity
             </p>
           </div>
 
@@ -214,7 +325,7 @@ export default function AuditReportsPage() {
           />
           <StatCard
             label="Latest Risks Identified"
-            value={selectedReport?.summary?.risksIdentified ?? 0}
+            value={selectedReport?.summary?.totalRisks ?? selectedReport?.summary?.risksIdentified ?? 0}
             tone="orange"
           />
         </div>
@@ -323,18 +434,24 @@ export default function AuditReportsPage() {
                           {report.summary?.complianceScore ?? 0}%
                         </td>
                         <td className="px-6 py-4 text-slate-600">
-                          {report.summary?.risksIdentified ?? 0}
+                          {report.summary?.totalRisks ?? report.summary?.risksIdentified ?? 0}
                         </td>
                         <td className="px-6 py-4 text-slate-600">
                           {formatDate(report.generatedAt)}
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 flex-wrap">
                             <button
                               onClick={() => handleViewReport(report._id)}
                               className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-semibold hover:bg-blue-200"
                             >
                               View
+                            </button>
+                            <button
+                              onClick={() => downloadReportAsPDF(report)}
+                              className="px-3 py-1 bg-green-100 text-green-700 rounded-md text-xs font-semibold hover:bg-green-200"
+                            >
+                              Download
                             </button>
                             <button
                               onClick={() => handleDeleteReport(report._id)}
@@ -362,16 +479,27 @@ export default function AuditReportsPage() {
                   Generated on {formatDate(selectedReport.generatedAt)}
                 </p>
               </div>
-              <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm font-semibold capitalize w-fit">
-                {selectedReport.reportType}
-              </span>
+              <div className="flex gap-3 flex-wrap">
+                <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm font-semibold capitalize w-fit">
+                  {selectedReport.reportType}
+                </span>
+                <button
+                  onClick={() => downloadReportAsPDF(selectedReport)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition w-fit"
+                >
+                  Download PDF
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <MiniCard title="Compliance Score" value={`${selectedReport.summary?.complianceScore ?? 0}%`} />
               <MiniCard title="HIPAA" value={`${selectedReport.summary?.hipaaCompliance ?? 0}%`} />
               <MiniCard title="DPDPA" value={`${selectedReport.summary?.dpdpaCompliance ?? 0}%`} />
-              <MiniCard title="Risks Identified" value={`${selectedReport.summary?.risksIdentified ?? 0}`} />
+              <MiniCard
+                title="Risks Identified"
+                value={`${selectedReport.summary?.totalRisks ?? selectedReport.summary?.risksIdentified ?? 0}`}
+              />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -391,7 +519,9 @@ export default function AuditReportsPage() {
                   <li>Unique Users: {selectedReport.details?.accessMetrics?.uniqueUsers ?? 0}</li>
                   <li>Read Operations: {selectedReport.details?.accessMetrics?.readOperations ?? 0}</li>
                   <li>Write Operations: {selectedReport.details?.accessMetrics?.writeOperations ?? 0}</li>
+                  <li>Update Operations: {selectedReport.details?.accessMetrics?.updateOperations ?? 0}</li>
                   <li>Delete Operations: {selectedReport.details?.accessMetrics?.deleteOperations ?? 0}</li>
+                  <li>Export Operations: {selectedReport.details?.accessMetrics?.exportOperations ?? 0}</li>
                 </ul>
               </InfoPanel>
             </div>
