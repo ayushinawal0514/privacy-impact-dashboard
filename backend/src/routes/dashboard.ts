@@ -4,15 +4,10 @@ import { getDB } from '../config/database';
 import logger from '../config/logger';
 
 const router = Router();
-
-/**
- * Build role-aware Mongo filters
- */
 function getRoleBasedFilters(req: AuthRequest) {
   const orgId = req.user!.organizationId;
   const userId = req.userId!;
   const isAdmin = req.role === 'admin';
-
   return {
     isAdmin,
     orgId,

@@ -6,9 +6,7 @@ import logger from '../config/logger';
 import { authMiddleware, AuthRequest } from '../middleware/middlewares';
 
 const router = Router();
-
 type UserRole = 'admin' | 'user';
-
 router.post('/register', async (req: Request, res: Response) => {
   try {
     const {
@@ -19,23 +17,19 @@ router.post('/register', async (req: Request, res: Response) => {
       role,
       adminKey
     } = req.body;
-
     const db = getDB();
-
     if (!email || !password || !name) {
       return res.status(400).json({
         success: false,
         message: 'Name, email, and password are required'
       });
     }
-
     if (password.length < 8) {
       return res.status(400).json({
         success: false,
         message: 'Password must be at least 8 characters long'
       });
     }
-
     const existingUser = await db.collection('users').findOne({ email });
     if (existingUser) {
       return res.status(400).json({
