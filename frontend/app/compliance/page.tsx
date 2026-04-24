@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -9,20 +8,17 @@ import {
   RiskDistributionChart,
 } from "@/app/components/dashboard/Charts";
 import { apiMethods, setAuthToken } from "@/lib/api-client";
-
 type RiskSummary = {
   critical: number;
   high: number;
   medium: number;
   low: number;
 };
-
 type RequirementScore = {
   passed: number;
   failed: number;
   score: number;
 };
-
 type ComplianceApiData = {
   datasetId: string | null;
   datasetName: string | null;
