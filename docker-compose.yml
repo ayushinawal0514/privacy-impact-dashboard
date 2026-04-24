@@ -30,13 +30,10 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      MONGODB_URI: mongodb://admin:password@mongodb:27017/healthcare-compliance?authSource=admin
+      MONGODB_URI: mongodb+srv://zainkhan23_db_user:zainkhan05@capstone.u2jglaa.mongodb.net/pia_framework?retryWrites=true&w=majority
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production-123456}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       LOG_LEVEL: ${LOG_LEVEL:-info}
-    depends_on:
-      mongodb:
-        condition: service_healthy
     volumes:
       - ./backend/logs:/app/logs
     networks:
