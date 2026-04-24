@@ -1,29 +1,24 @@
 "use client";
-
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
       const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
       });
-
       if (!result) {
         setError("No response from authentication server.");
       } else if (result.error) {
@@ -38,11 +33,9 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 px-4">
       <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden grid md:grid-cols-2">
-
         <div className="hidden md:flex flex-col justify-center items-center bg-gradient-to-br from-indigo-600 to-blue-600 text-white p-10">
           <h2 className="text-3xl font-bold mb-4">Welcome Back!</h2>
           <p className="text-center text-sm mb-6">
@@ -55,17 +48,13 @@ export default function LoginPage() {
             Create Account
           </Link>
         </div>
-
-
         <div className="p-8 flex flex-col justify-center">
           <h2 className="text-2xl font-bold mb-6 text-gray-800">Sign In</h2>
-
           {error && (
             <div className="bg-red-100 text-red-600 p-3 rounded mb-4 text-sm">
               {error}
             </div>
           )}
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
               type="email"
@@ -75,7 +64,6 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-
             <input
               type="password"
               placeholder="Password"
@@ -84,7 +72,6 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-
             <button
               type="submit"
               disabled={loading}
@@ -93,7 +80,6 @@ export default function LoginPage() {
               {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
-
           <p className="mt-4 text-sm text-gray-600">
             Don’t have an account?{" "}
             <Link href="/register" className="text-indigo-600 font-semibold">
@@ -105,4 +91,3 @@ export default function LoginPage() {
     </div>
   );
 }
-//access logs
