@@ -37,7 +37,6 @@ type ComplianceApiData = {
   };
   lastUpdated: string | null;
 };
-
 type RiskItem = {
   _id?: string;
   severity: "critical" | "high" | "medium" | "low";
@@ -50,7 +49,6 @@ type RiskItem = {
   datasetName?: string;
   recordId?: string;
 };
-
 type RisksApiResponse = {
   success: boolean;
   role: string;
@@ -63,11 +61,9 @@ type RisksApiResponse = {
   }>;
   data: RiskItem[];
 };
-
 export default function ComplianceDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-
   const [loading, setLoading] = useState(true);
   const [complianceData, setComplianceData] = useState<ComplianceApiData | null>(null);
   const [risks, setRisks] = useState<RiskItem[]>([]);
@@ -80,30 +76,24 @@ export default function ComplianceDashboard() {
   const [datasets, setDatasets] = useState<Array<{ datasetId?: string | null; datasetName?: string | null; count: number }>>([]);
   const [selectedDataset, setSelectedDataset] = useState("latest");
   const [error, setError] = useState<string | null>(null);
-
   const accessToken = (session as any)?.accessToken;
-
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
     }
   }, [status, router]);
-
   useEffect(() => {
     if (!session || !accessToken) return;
 
     setAuthToken(accessToken);
     fetchComplianceData("latest");
-
     const interval = setInterval(() => fetchComplianceData(selectedDataset), 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [session, accessToken]);
-
   async function fetchComplianceData(datasetName = selectedDataset) {
     try {
       setLoading(true);
       setError(null);
-
       const complianceRes =
         datasetName && datasetName !== "latest"
           ? await apiMethods.getComplianceStatus(datasetName)
